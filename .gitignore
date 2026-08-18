@@ -54,3 +54,9 @@ appsettings.Local.json
 ## Packages & Publishing
 *.nupkg
 **/node_modules/
+# NuGet paketlerinin indirildiği eski tip packages klasörü (Örn: .NET Framework)
+[Pp]ackages/
+# Paket geri yükleme (restore) sırasında oluşabilecek geçici kilit dosyaları
+project.assets.json
+# NuGet paketlerinin yerel araç klasörleri
+.nuget/
