@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="EnergyTrading.Application/EnergyTrading.Application.csproj" />
+  <Project Path="EnergyTrading.Domain/EnergyTrading.Domain.csproj" />
+  <Project Path="EnergyTrading.Infrastructure/EnergyTrading.Infrastructure.csproj" />
+  <Project Path="EnergyTrading.Tests/EnergyTrading.Tests.csproj" />
+  <Project Path="EnergyTrading.Worker/EnergyTrading.Worker.csproj" />
+</Solution>

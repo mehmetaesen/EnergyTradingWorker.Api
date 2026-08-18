@@ -1,0 +1,56 @@
+## Core .NET Build Artifacts
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+
+## .NET Core / SDK Specific
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.blame
+*.binlog
+
+## User-specific files & configurations
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.usersecrets/
+
+## IDE - Visual Studio
+.vs/
+Generated Files/
+_ReSharper*/
+*.atlos
+*.suo
+
+## IDE - Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/code-workspace
+
+## IDE - JetBrains Rider
+.idea/
+*.sln.iml
+
+## OS generated files
+.DS_Store
+Thumbs.db
+
+## Secrets & Local Environment Configs
+.env
+.env.*
+appsettings.Development.json
+appsettings.Local.json
+
+## Packages & Publishing
+*.nupkg
+**/node_modules/

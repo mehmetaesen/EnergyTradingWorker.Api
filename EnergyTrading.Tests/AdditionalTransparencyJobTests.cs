@@ -1,0 +1,98 @@
+using EnergyTrading.Application;
+using EnergyTrading.Domain;
+
+namespace EnergyTrading.Tests;
+
+public sealed class AdditionalTransparencyJobTests
+{
+    [Fact]
+    public async Task Wind_generation_job_maps_ten_minute_period_and_values()
+    {
+        var repository = new FakeRepository<WindGenerationAndForecast>();
+        var job = new WindGenerationForecastJob(
+            new FakeLog(), new FakeClient(), repository, new FakeUnitOfWork(), new FakeClock());
+
+        await job.ExecuteAsync();
+
+        var entity = Assert.Single(repository.Inserted);
+        Assert.Equal(8, entity.TimeOfPeriodId);
+        Assert.Equal(110m, entity.Forecast);
+        Assert.Equal(105m, entity.Generation);
+        Assert.Equal(90m, entity.Quantile5);
+        Assert.Equal(125m, entity.Quantile95);
+    }
+
+    [Fact]
+    public async Task Real_time_generation_job_maps_documented_response_fields()
+    {
+        var repository = new FakeRepository<RealTimeGeneration>();
+        var client = new TypedFakeClient();
+        var job = new RealTimeGenerationJob(
+            new FakeLog(), client, repository, new FakeUnitOfWork(), new FakeClock(), new FakeRegionProvider());
+
+        await job.ExecuteAsync();
+
+        var entity = Assert.Single(repository.Inserted);
+        Assert.Equal(new DateOnly(2026, 8, 17), entity.Date);
+        Assert.Equal(1, entity.TimeOfPeriodId);
+        Assert.Equal(42.5m, entity.NaturalGas);
+        Assert.Equal(100m, entity.Total);
+        Assert.Equal("v1/generation/data/realtime-generation", client.Path);
+    }
+
+    private sealed class FakeClient : ITransparencyApiClient
+    {
+        public Task<McpResponse> GetMcpAsync(McpRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<SystemMarginalPriceResponse> GetSystemMarginalPriceAsync(SystemMarginalPriceRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<WindGenerationForecastResponse> GetWindGenerationForecastAsync(DateRangeRequest request, CancellationToken cancellationToken) =>
+            Task.FromResult(new WindGenerationForecastResponse([
+                new(new DateTimeOffset(2026, 8, 18, 0, 0, 0, TimeSpan.FromHours(3)),
+                    new DateTimeOffset(2026, 8, 18, 1, 10, 0, TimeSpan.FromHours(3)),
+                    110, 105, 90, 95, 120, 125)
+            ]));
+    }
+
+    private sealed class FakeClock : ITurkeyClock
+    {
+        public DateTimeOffset Now => new(2026, 8, 18, 12, 0, 0, TimeSpan.FromHours(3));
+        public DateOnly Today => new(2026, 8, 18);
+    }
+
+    private sealed class FakeRegionProvider : ITransparencyRegionProvider { public string SystemMarginalPriceRegion => "TR1"; }
+
+    private sealed class TypedFakeClient : ITransparencyApiClient
+    {
+        public string? Path { get; private set; }
+        public Task<McpResponse> GetMcpAsync(McpRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<SystemMarginalPriceResponse> GetSystemMarginalPriceAsync(SystemMarginalPriceRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<TResponse> GetDataAsync<TResponse>(string path, object request, CancellationToken cancellationToken)
+        {
+            Path = path;
+            object response = new RealTimeGenerationResponse([
+                new(new DateTimeOffset(2026,8,17,0,0,0,TimeSpan.FromHours(3)), "00:00-01:00",
+                    1,2,3,4,5,6,7,8,9,10,11,42.5m,13,14,100,15,16)
+            ]);
+            return Task.FromResult((TResponse)response);
+        }
+    }
+
+    private sealed class FakeRepository<TEntity> : IGenericRepository<TEntity> where TEntity : BaseEntity, IPeriodEntity
+    {
+        public List<TEntity> Inserted { get; } = [];
+        public Task<List<TEntity>> GetListAsync(DateOnly date, IReadOnlyCollection<int> ids, CancellationToken ct) => Task.FromResult(new List<TEntity>());
+        public Task InsertAsync(IReadOnlyCollection<TEntity> entities, CancellationToken ct) { Inserted.AddRange(entities); return Task.CompletedTask; }
+        public Task UpdateAsync(IReadOnlyCollection<TEntity> entities, CancellationToken ct) => Task.CompletedTask;
+    }
+
+    private sealed class FakeUnitOfWork : IUnitOfWork
+    {
+        public Task<T> ExecuteInTransactionAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken cancellationToken) => action(cancellationToken);
+    }
+
+    private sealed class FakeLog : IIntegrationJobLogService
+    {
+        public Task<(long JobId, long LogId)> StartAsync(string jobCode, JobExecutionContext context, Guid correlationId, CancellationToken cancellationToken) => Task.FromResult((4L, 1L));
+        public Task CompleteAsync(long logId, int fetchedCount, SaveResult result, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task FailAsync(long logId, Exception exception, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+}
