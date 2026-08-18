@@ -9,6 +9,7 @@ x86/
 build/
 
 ## .NET Core / SDK Specific
+.dotnet/
 project.lock.json
 project.fragment.lock.json
 artifacts/
