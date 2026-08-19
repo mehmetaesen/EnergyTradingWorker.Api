@@ -28,6 +28,15 @@
     button { width:100%; border:0; border-radius:12px; padding:14px 18px; margin-top:8px; background:linear-gradient(110deg,var(--accent2),var(--accent)); color:#04121c; font:inherit; font-weight:850; cursor:pointer; box-shadow:0 12px 30px #36c5ba30; }
     button:hover { filter:brightness(1.08); transform:translateY(-1px); }
     button:disabled { opacity:.55; cursor:wait; transform:none; }
+    .backfill { margin-top:24px; padding-top:22px; border-top:1px solid var(--line); }
+    .backfill button { background:linear-gradient(110deg,#ffb347,#ff7c85); }
+    .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:18px; }
+    .metric { padding:12px; border:1px solid var(--line); border-radius:11px; background:#091525; }
+    .metric strong { display:block; font-size:20px; }
+    .metric span { color:var(--muted); font-size:11px; }
+    .details { width:100%; margin-top:14px; border-collapse:collapse; font-size:12px; }
+    .details th,.details td { padding:8px 6px; border-bottom:1px solid var(--line); text-align:right; }
+    .details th:first-child,.details td:first-child { text-align:left; }
     .status { min-height:44px; margin-top:17px; border-radius:10px; padding:11px 13px; display:none; line-height:1.45; }
     .status.ok { display:block; color:#b9f5dd; background:#43d4a014; border:1px solid #43d4a044; }
     .status.error { display:block; color:#ffc0c5; background:#ff7c8513; border:1px solid #ff7c8544; }
@@ -60,27 +69,49 @@
           <button id="submit" type="submit">Queue’ya ekle</button>
           <div id="status" class="status" role="status" aria-live="polite"></div>
         </form>
+        <div class="backfill">
+          <h2>Şeffaflık geçmiş verilerini doldur</h2>
+          <p class="lead">Bütün aktif Şeffaflık joblarını 01.01.2020’den bugüne kadar güvenli tarih dilimleriyle queue’ya ekler.</p>
+          <button id="backfill" type="button">2020’den itibaren backfill başlat</button>
+          <div id="backfill-status" class="status" role="status" aria-live="polite"></div>
+          <div id="backfill-progress" hidden>
+            <div class="metrics">
+              <div class="metric"><strong id="progress-completed">0</strong><span>Başarılı</span></div>
+              <div class="metric"><strong id="progress-running">0</strong><span>Çalışan</span></div>
+              <div class="metric"><strong id="progress-failed">0</strong><span>Hatalı</span></div>
+              <div class="metric"><strong id="progress-queued">0</strong><span>Bekleyen</span></div>
+              <div class="metric"><strong id="progress-fetched">0</strong><span>Çekilen kayıt</span></div>
+              <div class="metric"><strong id="progress-inserted">0</strong><span>Eklenen kayıt</span></div>
+              <div class="metric"><strong id="progress-updated">0</strong><span>Güncellenen kayıt</span></div>
+              <div class="metric"><strong id="progress-total">0</strong><span>Toplam dilim</span></div>
+            </div>
+            <table class="details"><thead><tr><th>Job</th><th>Başarılı</th><th>Hatalı</th><th>Çekilen</th><th>Eklenen</th><th>Güncellenen</th></tr></thead><tbody id="backfill-details"></tbody></table>
+          </div>
+        </div>
       </section>
       <aside class="card">
         <div class="aside-title"><span class="dot"></span>Çalıştırma kuralları</div>
-        <div class="rule"><strong>En fazla bir ay</strong><span>Bitiş tarihi, başlangıç tarihinden en fazla bir takvim ayı sonrası olabilir.</span></div>
+        <div class="rule"><strong>En fazla 31 gün</strong><span>Manuel istek ve backfill dilimleri en fazla 31 gün içerir.</span></div>
         <div class="rule"><strong>Idempotent kayıt</strong><span>Eksik dönemler eklenir, değişenler güncellenir; aynı kayıt ikinci kez oluşmaz.</span></div>
         <div class="rule"><strong>Queue tabanlı</strong><span>Ekran işlemin bitmesini beklemez. Job durumunu Hangfire Dashboard’dan izleyebilirsiniz.</span></div>
       </aside>
     </main>
   </div>
   <script>
-    const form=document.querySelector('#run-form'), queue=document.querySelector('#queue'), job=document.querySelector('#job'), start=document.querySelector('#start-date'), end=document.querySelector('#end-date'), submit=document.querySelector('#submit'), status=document.querySelector('#status');
+    const form=document.querySelector('#run-form'), queue=document.querySelector('#queue'), job=document.querySelector('#job'), start=document.querySelector('#start-date'), end=document.querySelector('#end-date'), submit=document.querySelector('#submit'), status=document.querySelector('#status'), backfill=document.querySelector('#backfill'), backfillStatus=document.querySelector('#backfill-status'), backfillProgress=document.querySelector('#backfill-progress'), backfillDetails=document.querySelector('#backfill-details');
     let availableJobs=[];
     const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const addMonths=(value,count)=>{const [y,m,d]=value.split('-').map(Number), result=new Date(y,m-1,d); result.setMonth(result.getMonth()+count); if(result.getDate()!==d) result.setDate(0); return iso(result);};
-    function setDefaults(){const today=new Date(), isPtf=job.value==='TRANSPARENCY_PTF', target=new Date(today); if(isPtf) target.setDate(target.getDate()+1); start.value=iso(target); end.value=start.value; end.min=start.value; end.max=addMonths(start.value,1);}
-    start.addEventListener('change',()=>{end.min=start.value; end.max=addMonths(start.value,1); if(!end.value||end.value<start.value||end.value>end.max) end.value=start.value;});
+    const addDays=(value,count)=>{const [y,m,d]=value.split('-').map(Number), result=new Date(y,m-1,d); result.setDate(result.getDate()+count); return iso(result);};
+    function setDefaults(){const today=new Date(), isPtf=job.value==='TRANSPARENCY_PTF', target=new Date(today); if(isPtf) target.setDate(target.getDate()+1); start.value=iso(target); end.value=start.value; end.min=start.value; end.max=addDays(start.value,30);}
+    start.addEventListener('change',()=>{end.min=start.value; end.max=addDays(start.value,30); if(!end.value||end.value<start.value||end.value>end.max) end.value=start.value;});
     job.addEventListener('change',setDefaults);
     queue.addEventListener('change',()=>{const items=availableJobs.filter(x=>x.queueName===queue.value); job.replaceChildren(new Option(items.length?'Job seçin':'Bu queue’da aktif job yok','')); items.forEach(x=>job.add(new Option(x.name,x.code))); job.disabled=!queue.value||items.length===0; setDefaults();});
     const jobsController=new AbortController(); setTimeout(()=>jobsController.abort(),10000);
     fetch('/api/jobs',{signal:jobsController.signal}).then(r=>{if(!r.ok) throw new Error('Job listesi alınamadı.'); return r.json();}).then(items=>{availableJobs=items; const queues=[...new Set(items.map(x=>x.queueName))].sort(); queue.replaceChildren(new Option('Queue seçin','')); queues.forEach(value=>queue.add(new Option(value.charAt(0).toUpperCase()+value.slice(1),value))); job.replaceChildren(new Option('Önce queue seçin',''));}).catch(e=>{queue.replaceChildren(new Option('Queue listesi alınamadı','')); job.replaceChildren(new Option('Job listesi alınamadı','')); show(e.name==='AbortError'?'Job listesi zaman aşımına uğradı. Veritabanı bağlantısını kontrol edin.':e.message,false);});
     form.addEventListener('submit',async e=>{e.preventDefault(); submit.disabled=true; status.className='status'; try{const response=await fetch('/api/jobs/enqueue',{method:'POST',headers:{'Content-Type':'application/json','X-Requested-With':'EnergyTradingOperations'},body:JSON.stringify({jobCode:job.value,startDate:start.value,endDate:end.value})}); const payload=await response.json(); if(!response.ok) throw new Error(payload.message||'Job queue’ya eklenemedi.'); show(`${payload.message} Hangfire Job ID: ${payload.jobId}`,true);}catch(error){show(error.message,false);}finally{submit.disabled=false;}});
+    backfill.addEventListener('click',async()=>{if(!confirm('Bütün aktif Şeffaflık jobları için 2020’den bugüne backfill başlatılsın mı? Bu işlem çok sayıda API isteği oluşturacaktır.')) return; backfill.disabled=true; backfillStatus.className='status'; try{const response=await fetch('/api/jobs/backfill',{method:'POST',headers:{'X-Requested-With':'EnergyTradingOperations'}}); const payload=await response.json(); if(!response.ok) throw new Error(payload.message||'Backfill başlatılamadı.'); backfillStatus.textContent=`${payload.message} ${payload.jobCount} job, ${payload.queuedJobCount} tarih dilimi.`; backfillStatus.className='status ok'; backfillProgress.hidden=false; localStorage.setItem('transparencyBackfillRunId',payload.runId); pollBackfill(payload.runId);}catch(error){backfillStatus.textContent=error.message; backfillStatus.className='status error'; backfill.disabled=false;}});
+    async function pollBackfill(runId){try{const response=await fetch(`/api/jobs/backfill/${runId}`); const data=await response.json(); if(!response.ok) throw new Error(data.message||'Backfill durumu alınamadı.'); const values={completed:data.succeeded,running:data.running,failed:data.failed,queued:data.queued,fetched:data.fetched,inserted:data.inserted,updated:data.updated,total:data.total}; Object.entries(values).forEach(([key,value])=>document.querySelector(`#progress-${key}`).textContent=value.toLocaleString('tr-TR')); backfillDetails.replaceChildren(...data.details.map(item=>{const row=document.createElement('tr'); [item.jobCode,item.succeeded,item.failed,item.fetched,item.inserted,item.updated].forEach(value=>{const cell=document.createElement('td'); cell.textContent=typeof value==='number'?value.toLocaleString('tr-TR'):value; row.appendChild(cell);}); return row;})); if(data.queued>0||data.running>0) setTimeout(()=>pollBackfill(runId),5000); else backfill.disabled=false;}catch(error){backfillStatus.textContent=error.message; backfillStatus.className='status error'; backfill.disabled=false;}}
+    const savedBackfillRunId=localStorage.getItem('transparencyBackfillRunId'); if(savedBackfillRunId){backfillProgress.hidden=false; pollBackfill(savedBackfillRunId);}
     function show(message,ok){status.textContent=message; status.className=`status ${ok?'ok':'error'}`;}
   </script>
 </body>

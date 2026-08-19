@@ -39,6 +39,7 @@ public abstract class PeriodDataJobBase<TEntity, TData>(
     private TEntity CreateCandidate(TData item)
     {
         var key = GetKey(item);
+        TransparencyPeriod.Validate(key.Period);
         var candidate = new TEntity { Date = key.Date, TimeOfPeriodId = key.Period };
         Map(item, candidate);
         return candidate;
@@ -115,7 +116,13 @@ internal static class TransparencyPeriod
 
     internal static int Hour(int value) => value is >= 1 and <= 24 ? value : value + 1;
 
-    internal static int TenMinute(DateTimeOffset value) => value.Hour * 6 + value.Minute / 10 + 1;
+    internal static void Validate(int value)
+    {
+        if (value is < 1 or > 24)
+            throw new InvalidOperationException(
+                $"TimeOfPeriodId must be between 1 and 24, but was {value}.");
+    }
+
 }
 
 internal static class TransparencyValue

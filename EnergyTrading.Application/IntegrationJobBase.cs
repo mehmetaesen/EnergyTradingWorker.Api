@@ -42,7 +42,9 @@ public abstract class IntegrationJobBase<TFetchedData>(IIntegrationJobLogService
     {
         if (endDate < startDate)
             throw new ArgumentException("End date cannot be earlier than start date.");
-        if (endDate > startDate.AddMonths(1))
-            throw new ArgumentOutOfRangeException(nameof(endDate), "The selected date range cannot exceed one calendar month.");
+        if (endDate > startDate.AddDays(30))
+            throw new ArgumentOutOfRangeException(
+                nameof(endDate),
+                "The selected date range cannot exceed 31 days.");
     }
 }

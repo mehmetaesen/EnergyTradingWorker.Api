@@ -6,7 +6,7 @@ namespace EnergyTrading.Tests;
 public sealed class AdditionalTransparencyJobTests
 {
     [Fact]
-    public async Task Wind_generation_job_maps_ten_minute_period_and_values()
+    public async Task Wind_generation_job_maps_hour_and_quarter_values()
     {
         var repository = new FakeRepository<WindGenerationAndForecast>();
         var job = new WindGenerationForecastJob(
@@ -15,7 +15,9 @@ public sealed class AdditionalTransparencyJobTests
         await job.ExecuteAsync();
 
         var entity = Assert.Single(repository.Inserted);
-        Assert.Equal(8, entity.TimeOfPeriodId);
+        Assert.Equal(2, entity.TimeOfPeriodId);
+        Assert.Equal(2, entity.Quarter);
+        Assert.Equal(new TimeOnly(1, 15), entity.Hour);
         Assert.Equal(110m, entity.Forecast);
         Assert.Equal(105m, entity.Generation);
         Assert.Equal(90m, entity.Quantile5);
@@ -63,7 +65,7 @@ public sealed class AdditionalTransparencyJobTests
         public Task<WindGenerationForecastResponse> GetWindGenerationForecastAsync(DateRangeRequest request, CancellationToken cancellationToken) =>
             Task.FromResult(new WindGenerationForecastResponse([
                 new(new DateTimeOffset(2026, 8, 18, 0, 0, 0, TimeSpan.FromHours(3)),
-                    new DateTimeOffset(2026, 8, 18, 1, 10, 0, TimeSpan.FromHours(3)),
+                    new DateTimeOffset(2026, 8, 18, 1, 15, 0, TimeSpan.FromHours(3)),
                     110, 105, 90, 95, 120, 125)
             ]));
     }

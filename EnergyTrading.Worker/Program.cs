@@ -1,4 +1,6 @@
 using EnergyTrading.Application;
+using EnergyTrading.Domain;
+using EnergyTrading.Domain.Transparency;
 using EnergyTrading.Infrastructure;
 using EnergyTrading.Worker;
 using Scheduled = EnergyTrading.Worker.Transparency;
@@ -51,8 +53,8 @@ app.MapPost("/api/jobs/enqueue", (
         return Results.BadRequest(new { Message = "Invalid operations request." });
     if (request.EndDate < request.StartDate)
         return Results.BadRequest(new { Message = "Bitiş tarihi başlangıç tarihinden önce olamaz." });
-    if (request.EndDate > request.StartDate.AddMonths(1))
-        return Results.BadRequest(new { Message = "Tarih aralığı en fazla bir takvim ayı olabilir." });
+    if (request.EndDate > request.StartDate.AddDays(30))
+        return Results.BadRequest(new { Message = "Tarih aralığı en fazla 31 gün olabilir." });
     if (request.JobCode == SystemMarginalPriceJob.Code
         && (request.StartDate > clock.Today || request.EndDate > clock.Today))
         return Results.BadRequest(new { Message = "Sistem Marjinal Fiyatı gelecek tarih için çalıştırılamaz." });
@@ -95,6 +97,162 @@ app.MapPost("/api/jobs/enqueue", (
         : Results.Ok(new { JobId = backgroundJobId, Message = "Job queue'ya eklendi." });
 });
 
+app.MapPost("/api/jobs/backfill", async (
+    HttpRequest httpRequest,
+    IBackgroundJobClient backgroundJobs,
+    EnergyTradingDbContext db,
+    ITurkeyClock clock,
+    CancellationToken cancellationToken) =>
+{
+    if (!string.Equals(
+            httpRequest.Headers["X-Requested-With"],
+            "EnergyTradingOperations",
+            StringComparison.Ordinal))
+        return Results.BadRequest(new { Message = "Invalid operations request." });
+
+    var activeJobCodes = await db.IntegrationJobs
+        .AsNoTracking()
+        .Where(job => job.IsActive && job.QueueName == "transparency")
+        .Select(job => job.Code)
+        .ToListAsync(cancellationToken);
+    var supportedJobCodes = activeJobCodes
+        .Where(TransparencyJobScheduler.SupportedJobCodes.Contains)
+        .OrderBy(code => code)
+        .ToList();
+
+    if (supportedJobCodes.Count == 0)
+        return Results.BadRequest(new { Message = "Backfill için aktif Şeffaflık jobı bulunamadı." });
+
+    var startDate = new DateOnly(2020, 1, 1);
+    var endDate = clock.Today;
+    var queuedJobCount = 0;
+    var lastJobIds = supportedJobCodes.ToDictionary(code => code, _ => (string?)null);
+    var run = new TransparencyBackfillRun
+    {
+        StartDate = startDate,
+        EndDate = endDate,
+        StartedDate = DateTimeOffset.UtcNow,
+    };
+    db.TransparencyBackfillRuns.Add(run);
+    await db.SaveChangesAsync(cancellationToken);
+    var items = new List<TransparencyBackfillItem>();
+
+    foreach (var jobCode in supportedJobCodes)
+    {
+        var chunkSize = TransparencyJobScheduler.GetBackfillChunkSizeInDays(jobCode);
+        for (var chunkStart = startDate;
+             chunkStart <= endDate;
+             chunkStart = chunkStart.AddDays(chunkSize))
+        {
+            var chunkEnd = chunkStart.AddDays(chunkSize - 1);
+            if (chunkEnd > endDate)
+                chunkEnd = endDate;
+            var backgroundJobId = TransparencyJobScheduler.Enqueue(
+                backgroundJobs,
+                jobCode,
+                chunkStart,
+                chunkEnd,
+                lastJobIds[jobCode]);
+            if (backgroundJobId is not null)
+            {
+                lastJobIds[jobCode] = backgroundJobId;
+                queuedJobCount++;
+                items.Add(new TransparencyBackfillItem
+                {
+                    BackfillRunId = run.Id,
+                    HangfireJobId = backgroundJobId,
+                    JobCode = jobCode,
+                    StartDate = chunkStart,
+                    EndDate = chunkEnd,
+                });
+            }
+        }
+    }
+
+    run.TotalJobCount = queuedJobCount;
+    db.TransparencyBackfillItems.AddRange(items);
+    await db.SaveChangesAsync(cancellationToken);
+
+    return Results.Ok(new
+    {
+        Message = "Şeffaflık backfill jobları queue'ya eklendi.",
+        StartDate = startDate,
+        EndDate = endDate,
+        MaximumChunkSizeInDays = 31,
+        DailyJobCount = supportedJobCodes.Count(code =>
+            TransparencyJobScheduler.GetBackfillChunkSizeInDays(code) == 1),
+        JobCount = supportedJobCodes.Count,
+        QueuedJobCount = queuedJobCount,
+        RunId = run.Id,
+    });
+});
+
+app.MapGet("/api/jobs/backfill/{runId:long}", async (
+    long runId,
+    EnergyTradingDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    var run = await db.TransparencyBackfillRuns
+        .AsNoTracking()
+        .SingleOrDefaultAsync(item => item.Id == runId, cancellationToken);
+    if (run is null)
+        return Results.NotFound(new { Message = "Backfill çalışması bulunamadı." });
+
+    var items = await db.TransparencyBackfillItems
+        .AsNoTracking()
+        .Where(item => item.BackfillRunId == runId)
+        .ToListAsync(cancellationToken);
+    var hangfireJobIds = items.Select(item => item.HangfireJobId).ToList();
+    var attempts = await db.IntegrationJobLogs
+        .AsNoTracking()
+        .Where(log => log.HangfireJobId != null && hangfireJobIds.Contains(log.HangfireJobId))
+        .ToListAsync(cancellationToken);
+    var latestAttempts = attempts
+        .GroupBy(log => log.HangfireJobId!)
+        .ToDictionary(group => group.Key, group => group.MaxBy(log => log.Id)!);
+
+    var details = items
+        .GroupBy(item => item.JobCode)
+        .OrderBy(group => group.Key)
+        .Select(group =>
+        {
+            var logs = group
+                .Where(item => latestAttempts.ContainsKey(item.HangfireJobId))
+                .Select(item => latestAttempts[item.HangfireJobId])
+                .ToList();
+            return new
+            {
+                JobCode = group.Key,
+                Total = group.Count(),
+                Queued = group.Count() - logs.Count,
+                Running = logs.Count(log => log.Status == IntegrationJobStatus.Running),
+                Succeeded = logs.Count(log => log.Status == IntegrationJobStatus.Succeeded),
+                Failed = logs.Count(log => log.Status == IntegrationJobStatus.Failed),
+                Fetched = logs.Sum(log => log.FetchedRecordCount),
+                Inserted = logs.Sum(log => log.InsertedRecordCount),
+                Updated = logs.Sum(log => log.UpdatedRecordCount),
+            };
+        })
+        .ToList();
+
+    return Results.Ok(new
+    {
+        RunId = run.Id,
+        run.StartDate,
+        run.EndDate,
+        run.StartedDate,
+        Total = items.Count,
+        Queued = details.Sum(item => item.Queued),
+        Running = details.Sum(item => item.Running),
+        Succeeded = details.Sum(item => item.Succeeded),
+        Failed = details.Sum(item => item.Failed),
+        Fetched = details.Sum(item => item.Fetched),
+        Inserted = details.Sum(item => item.Inserted),
+        Updated = details.Sum(item => item.Updated),
+        Details = details,
+    });
+});
+
 app.MapPost("/api/jobs/reconcile", async (
     ReconciliationRequest request,
     HttpRequest httpRequest,
@@ -105,7 +263,7 @@ app.MapPost("/api/jobs/reconcile", async (
         return Results.BadRequest(new { Message = "Invalid operations request." });
     if (request.EndDate < request.StartDate)
         return Results.BadRequest(new { Message = "Bitiş tarihi başlangıç tarihinden önce olamaz." });
-    if (request.EndDate > request.StartDate.AddMonths(1))
+    if (request.EndDate > request.StartDate.AddDays(30))
         return Results.BadRequest(new { Message = "Tarih aralığı en fazla bir takvim ayı olabilir." });
 
     ITransparencyReconciliationJob? job = request.JobCode switch

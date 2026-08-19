@@ -1,4 +1,5 @@
 using EnergyTrading.Domain;
+using EnergyTrading.Domain.Transparency;
 using Microsoft.EntityFrameworkCore;
 
 namespace EnergyTrading.Infrastructure;
@@ -7,6 +8,8 @@ public sealed class EnergyTradingDbContext(DbContextOptions<EnergyTradingDbConte
 {
     public DbSet<IntegrationJob> IntegrationJobs => Set<IntegrationJob>();
     public DbSet<IntegrationJobLog> IntegrationJobLogs => Set<IntegrationJobLog>();
+    public DbSet<TransparencyBackfillRun> TransparencyBackfillRuns => Set<TransparencyBackfillRun>();
+    public DbSet<TransparencyBackfillItem> TransparencyBackfillItems => Set<TransparencyBackfillItem>();
     public DbSet<MarketClearingPrice> MarketClearingPrices => Set<MarketClearingPrice>();
     public DbSet<SystemMarginalPrice> SystemMarginalPrices => Set<SystemMarginalPrice>();
     public DbSet<LoadEstimationPlan> LoadEstimationPlans => Set<LoadEstimationPlan>();

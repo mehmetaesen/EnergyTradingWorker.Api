@@ -61,11 +61,21 @@ public sealed class JobTests
     }
 
     [Fact]
-    public async Task Manual_date_range_cannot_exceed_one_calendar_month()
+    public async Task Manual_date_range_cannot_exceed_31_days()
     {
         var fixture = new Fixture([]);
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            fixture.Job.ExecuteAsync(Fixture.Day, Fixture.Day.AddMonths(1).AddDays(1)));
+            fixture.Job.ExecuteAsync(Fixture.Day, Fixture.Day.AddDays(31)));
+    }
+
+    [Fact]
+    public async Task Manual_date_range_accepts_exactly_31_days()
+    {
+        var fixture = new Fixture([]);
+
+        await fixture.Job.ExecuteAsync(Fixture.Day, Fixture.Day.AddDays(30));
+
+        Assert.Single(fixture.Repository.Inserted);
     }
 
     private sealed class Fixture

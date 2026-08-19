@@ -1,8 +1,42 @@
 using EnergyTrading.Domain;
+using EnergyTrading.Domain.Transparency;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace EnergyTrading.Infrastructure;
+
+public sealed class TransparencyBackfillRunConfiguration
+    : IEntityTypeConfiguration<TransparencyBackfillRun>
+{
+    public void Configure(EntityTypeBuilder<TransparencyBackfillRun> builder)
+    {
+        builder.ToTable("transparency_backfill_runs");
+        builder.ConfigureBase();
+        builder.Property(entity => entity.StartDate).HasColumnType("date");
+        builder.Property(entity => entity.EndDate).HasColumnType("date");
+        builder.HasIndex(entity => entity.StartedDate);
+    }
+}
+
+public sealed class TransparencyBackfillItemConfiguration
+    : IEntityTypeConfiguration<TransparencyBackfillItem>
+{
+    public void Configure(EntityTypeBuilder<TransparencyBackfillItem> builder)
+    {
+        builder.ToTable("transparency_backfill_items");
+        builder.ConfigureBase();
+        builder.Property(entity => entity.HangfireJobId).HasMaxLength(100).IsRequired();
+        builder.Property(entity => entity.JobCode).HasMaxLength(100).IsRequired();
+        builder.Property(entity => entity.StartDate).HasColumnType("date");
+        builder.Property(entity => entity.EndDate).HasColumnType("date");
+        builder.HasOne(entity => entity.BackfillRun)
+            .WithMany(entity => entity.Items)
+            .HasForeignKey(entity => entity.BackfillRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(entity => entity.HangfireJobId).IsUnique();
+        builder.HasIndex(entity => new { entity.BackfillRunId, entity.JobCode });
+    }
+}
 
 public abstract class PeriodEntityConfiguration<TEntity> : IEntityTypeConfiguration<TEntity>
     where TEntity : BaseEntity, IPeriodEntity
@@ -11,7 +45,10 @@ public abstract class PeriodEntityConfiguration<TEntity> : IEntityTypeConfigurat
 
     public virtual void Configure(EntityTypeBuilder<TEntity> builder)
     {
-        builder.ToTable(TableName);
+        builder.ToTable(TableName, table =>
+            table.HasCheckConstraint(
+                $"ck_{TableName}_time_of_period_id",
+                "time_of_period_id BETWEEN 1 AND 24"));
         builder.ConfigureBase();
         builder.Property(entity => entity.Date).HasColumnType("date");
         ConfigureIdentity(builder);
@@ -43,7 +80,20 @@ public sealed class FirstVersionGenerationPlanConfiguration : PeriodEntityConfig
 public sealed class InjectionQuantityConfiguration : PeriodEntityConfiguration<InjectionQuantity> { protected override string TableName => "injection_quantities"; }
 public sealed class PrimaryFrequencyCapacityPriceConfiguration : PeriodEntityConfiguration<PrimaryFrequencyCapacityPrice> { protected override string TableName => "primary_frequency_capacity_prices"; }
 public sealed class SecondaryFrequencyCapacityPriceConfiguration : PeriodEntityConfiguration<SecondaryFrequencyCapacityPrice> { protected override string TableName => "secondary_frequency_capacity_prices"; }
-public sealed class WindGenerationAndForecastConfiguration : PeriodEntityConfiguration<WindGenerationAndForecast> { protected override string TableName => "wind_generation_and_forecasts"; }
+public sealed class WindGenerationAndForecastConfiguration : PeriodEntityConfiguration<WindGenerationAndForecast>
+{
+    protected override string TableName => "wind_generation_and_forecasts";
+
+    protected override void ConfigureIdentity(EntityTypeBuilder<WindGenerationAndForecast> builder)
+    {
+        builder.Property(entity => entity.Hour).HasColumnType("time without time zone");
+        builder.ToTable(table =>
+        {
+            table.HasCheckConstraint("ck_wind_generation_and_forecasts_quarter", "quarter BETWEEN 1 AND 4");
+        });
+        builder.HasIndex(entity => new { entity.Date, entity.TimeOfPeriodId, entity.Quarter }).IsUnique();
+    }
+}
 
 public sealed class SystemDirectionConfiguration : PeriodEntityConfiguration<SystemDirection>
 {
