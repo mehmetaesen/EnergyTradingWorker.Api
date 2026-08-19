@@ -56,12 +56,12 @@ public sealed class UnplannedPowerOutageJob(
             x.District,
             x.EffectedNeighbourhoods,
             x.EffectedSubscribers,
-            x.EndTime,
+            x.EndTime.ToUniversalTime(),
             x.HourlyLoadAvg,
             x.Id,
             x.Province,
             x.Reason,
-            x.StartTime
+            x.StartTime.ToUniversalTime()
         );
 
 }

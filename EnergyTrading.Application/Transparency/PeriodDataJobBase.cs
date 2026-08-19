@@ -1,3 +1,4 @@
+using System.Globalization;
 using EnergyTrading.Application;
 using EnergyTrading.Domain;
 
@@ -108,6 +109,13 @@ internal static class TransparencyPeriod
 
     internal static int Hour(string value)
     {
+        if (DateTimeOffset.TryParse(
+                value,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AllowWhiteSpaces,
+                out var dateTime))
+            return dateTime.Hour + 1;
+
         var first = value.Split('-', StringSplitOptions.TrimEntries)[0];
         if (!TimeOnly.TryParse(first, out var time))
             throw new FormatException($"EPİAŞ returned an invalid time value: '{value}'.");

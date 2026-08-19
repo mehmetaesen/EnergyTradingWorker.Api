@@ -38,6 +38,6 @@ public sealed class WithdrawalQuantityJob(
         (DateOnly.FromDateTime(x.Hour.Date), x.Hour.Hour + 1);
 
     protected override void Map(WithdrawalQuantityItem x, WithdrawalQuantity y) =>
-        (y.Period, y.Swv) = (x.Period, x.Swv);
+        (y.Period, y.Swv) = (x.Period.ToUniversalTime(), x.Swv);
 
 }

@@ -30,13 +30,13 @@ public sealed class IdmWeightedAveragePriceJob(
                 new DateRangeRequest(x.Start, x.End),
                 ct
             )
-        ).Items;
+        ).Items.Where(item => item.Wap.HasValue).ToList();
     }
 
     protected override (DateOnly Date, int Period) GetKey(WeightedAveragePriceItem x) =>
         (DateOnly.FromDateTime(x.Date.Date), TransparencyPeriod.Hour(x.Hour));
 
     protected override void Map(WeightedAveragePriceItem x, IdmWeightedAveragePrice y) =>
-        y.WeightedAveragePrice = x.Wap;
+        y.WeightedAveragePrice = x.Wap!.Value;
 
 }

@@ -58,6 +58,38 @@ public sealed class AdditionalTransparencyJobTests
         Assert.Equal(new DateTimeOffset(2026, 8, 18, 10, 0, 0, TimeSpan.FromHours(3)), client.Request!.EndDate);
     }
 
+    [Fact]
+    public async Task Withdrawal_quantity_converts_period_to_utc_before_saving()
+    {
+        var repository = new FakeRepository<WithdrawalQuantity>();
+        var job = new WithdrawalQuantityJob(
+            new FakeLog(), new WithdrawalQuantityFakeClient(), repository,
+            new FakeUnitOfWork(), new FakeClock(), new FakeRegionProvider());
+
+        await job.ExecuteAsync(new DateOnly(2026, 8, 17), new DateOnly(2026, 8, 17));
+
+        var entity = Assert.Single(repository.Inserted);
+        Assert.Equal(TimeSpan.Zero, entity.Period.Offset);
+        Assert.Equal(new DateTimeOffset(2026, 8, 17, 0, 0, 0, TimeSpan.Zero), entity.Period);
+        Assert.Equal(12.5m, entity.Swv);
+    }
+
+    [Fact]
+    public async Task Unlicensed_generation_accepts_iso_datetime_in_time_field()
+    {
+        var repository = new FakeRepository<UnlicensedGenerationAmount>();
+        var job = new UnlicensedGenerationJob(
+            new FakeLog(), new UnlicensedGenerationFakeClient(), repository,
+            new FakeUnitOfWork(), new FakeClock(), new FakeRegionProvider());
+
+        await job.ExecuteAsync(new DateOnly(2020, 1, 1), new DateOnly(2020, 1, 1));
+
+        var entity = Assert.Single(repository.Inserted);
+        Assert.Equal(new DateOnly(2020, 1, 1), entity.Date);
+        Assert.Equal(1, entity.TimeOfPeriodId);
+        Assert.Equal(28m, entity.Total);
+    }
+
     private sealed class FakeClient : ITransparencyApiClient
     {
         public Task<McpResponse> GetMcpAsync(McpRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -113,6 +145,54 @@ public sealed class AdditionalTransparencyJobTests
             return Task.FromResult(new RealTimeConsumptionResponse([
                 new(new DateTimeOffset(2026, 8, 18, 0, 0, 0, TimeSpan.FromHours(3)), "08:00", 123.45m)
             ]));
+        }
+    }
+
+    private sealed class WithdrawalQuantityFakeClient : ITransparencyApiClient
+    {
+        public Task<McpResponse> GetMcpAsync(McpRequest request, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<SystemMarginalPriceResponse> GetSystemMarginalPriceAsync(
+            SystemMarginalPriceRequest request,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<TResponse> GetDataAsync<TResponse>(
+            string path,
+            object request,
+            CancellationToken cancellationToken)
+        {
+            object response = new WithdrawalQuantityResponse([
+                new(
+                    new DateTimeOffset(2026, 8, 17, 3, 0, 0, TimeSpan.FromHours(3)),
+                    new DateTimeOffset(2026, 8, 17, 3, 0, 0, TimeSpan.FromHours(3)),
+                    12.5m)
+            ]);
+            return Task.FromResult((TResponse)response);
+        }
+    }
+
+    private sealed class UnlicensedGenerationFakeClient : ITransparencyApiClient
+    {
+        public Task<McpResponse> GetMcpAsync(McpRequest request, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<SystemMarginalPriceResponse> GetSystemMarginalPriceAsync(
+            SystemMarginalPriceRequest request,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<TResponse> GetDataAsync<TResponse>(
+            string path,
+            object request,
+            CancellationToken cancellationToken)
+        {
+            object response = new UnlicensedGenerationResponse([
+                new(
+                    new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.FromHours(3)),
+                    "2020-01-01T00:00:00+03:00",
+                    1m, 2m, 3m, 4m, 5m, 6m, 28m)
+            ]);
+            return Task.FromResult((TResponse)response);
         }
     }
 

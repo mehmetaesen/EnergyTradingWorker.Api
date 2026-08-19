@@ -38,6 +38,26 @@ public sealed class EpiasClientTests
         Assert.Single(result.Items); Assert.Equal(100.25m, result.Items[0].Price); Assert.Equal("TGT-test", captured!.Headers.GetValues("TGT").Single());
     }
 
+    [Fact]
+    public async Task Weighted_average_price_response_accepts_null_wap()
+    {
+        const string json = """{"items":[{"date":"2026-08-17T00:00:00+03:00","hour":"00:00-01:00","wap":null}]}""";
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+        var client = new TransparencyHttpClient(
+            new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") },
+            new StubAuthentication());
+
+        var response = await client.PostAsync<DateRangeRequest, WeightedAveragePriceResponse>(
+            "v1/markets/idm/data/weighted-average-price",
+            new DateRangeRequest(DateTimeOffset.Now, DateTimeOffset.Now),
+            default);
+
+        Assert.Null(Assert.Single(response.Items).Wap);
+    }
+
     [Theory]
     [InlineData("null")]
     [InlineData("\"Şeffaflık servisi geçici olarak kullanılamıyor\"")]

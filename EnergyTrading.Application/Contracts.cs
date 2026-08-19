@@ -169,7 +169,7 @@ public sealed record OrderSummaryDownItem(DateTimeOffset Date, string Hour, deci
 public sealed record ClearingQuantityResponse(IReadOnlyList<ClearingQuantityItem> Items);
 public sealed record ClearingQuantityItem(DateTimeOffset Date, string Hour, decimal MatchedBids, decimal MatchedOffers);
 public sealed record WeightedAveragePriceResponse(IReadOnlyList<WeightedAveragePriceItem> Items);
-public sealed record WeightedAveragePriceItem(DateTimeOffset Date, string Hour, decimal Wap);
+public sealed record WeightedAveragePriceItem(DateTimeOffset Date, string Hour, decimal? Wap);
 public sealed record MatchingQuantityResponse(IReadOnlyList<MatchingQuantityItem> Items);
 public sealed record MatchingQuantityItem(decimal ClearingQuantityAsk, decimal ClearingQuantityBid, string KontratAdi, string KontratTuru);
 public sealed record WithdrawalQuantityResponse(IReadOnlyList<WithdrawalQuantityItem> Items);
