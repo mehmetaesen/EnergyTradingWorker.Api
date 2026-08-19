@@ -13,23 +13,23 @@ public partial class AddJobTableNameAndRenameDataTables : Migration
     {
         migrationBuilder.Sql(
             """
-            ALTER TABLE final_generation_plan_snapshots RENAME TO final_generation_plans;
-            ALTER TABLE new_installed_capacity_snapshots RENAME TO new_installed_capacities;
-            ALTER TABLE planned_power_outage_snapshots RENAME TO planned_power_outages;
-            ALTER TABLE unplanned_power_outage_snapshots RENAME TO unplanned_power_outages;
-            ALTER TABLE sgp_price_snapshots RENAME TO sgp_prices;
-            ALTER TABLE available_installed_capacity_snapshots RENAME TO available_installed_capacities;
-            ALTER TABLE unlicensed_generation_snapshots RENAME TO unlicensed_generation_amounts;
-            ALTER TABLE real_time_generation_snapshots RENAME TO real_time_generations;
-            ALTER TABLE order_summary_up_snapshots RENAME TO up_regulation_order_summaries;
-            ALTER TABLE order_summary_down_snapshots RENAME TO down_regulation_order_summaries;
-            ALTER TABLE clearing_quantity_snapshots RENAME TO clearing_quantities;
-            ALTER TABLE idm_weighted_average_price_snapshots RENAME TO idm_weighted_average_prices;
-            ALTER TABLE idm_matching_quantity_snapshots RENAME TO idm_matching_quantities;
-            ALTER TABLE withdrawal_quantity_snapshots RENAME TO withdrawal_quantities;
-            ALTER TABLE idm_contract_summary_snapshots RENAME TO idm_contract_summaries;
+            ALTER TABLE IF EXISTS final_generation_plan_snapshots RENAME TO final_generation_plans;
+            ALTER TABLE IF EXISTS new_installed_capacity_snapshots RENAME TO new_installed_capacities;
+            ALTER TABLE IF EXISTS planned_power_outage_snapshots RENAME TO planned_power_outages;
+            ALTER TABLE IF EXISTS unplanned_power_outage_snapshots RENAME TO unplanned_power_outages;
+            ALTER TABLE IF EXISTS sgp_price_snapshots RENAME TO sgp_prices;
+            ALTER TABLE IF EXISTS available_installed_capacity_snapshots RENAME TO available_installed_capacities;
+            ALTER TABLE IF EXISTS unlicensed_generation_snapshots RENAME TO unlicensed_generation_amounts;
+            ALTER TABLE IF EXISTS real_time_generation_snapshots RENAME TO real_time_generations;
+            ALTER TABLE IF EXISTS order_summary_up_snapshots RENAME TO up_regulation_order_summaries;
+            ALTER TABLE IF EXISTS order_summary_down_snapshots RENAME TO down_regulation_order_summaries;
+            ALTER TABLE IF EXISTS clearing_quantity_snapshots RENAME TO clearing_quantities;
+            ALTER TABLE IF EXISTS idm_weighted_average_price_snapshots RENAME TO idm_weighted_average_prices;
+            ALTER TABLE IF EXISTS idm_matching_quantity_snapshots RENAME TO idm_matching_quantities;
+            ALTER TABLE IF EXISTS withdrawal_quantity_snapshots RENAME TO withdrawal_quantities;
+            ALTER TABLE IF EXISTS idm_contract_summary_snapshots RENAME TO idm_contract_summaries;
 
-            ALTER TABLE integration_jobs ADD COLUMN table_name varchar(200) NOT NULL DEFAULT '';
+            ALTER TABLE integration_jobs ADD COLUMN IF NOT EXISTS table_name varchar(200) NOT NULL DEFAULT '';
 
             UPDATE integration_jobs SET table_name = CASE code
               WHEN 'TRANSPARENCY_PTF' THEN 'market_clearing_prices'

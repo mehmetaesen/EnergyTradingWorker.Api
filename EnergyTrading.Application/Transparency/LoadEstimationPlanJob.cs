@@ -28,7 +28,7 @@ public sealed class LoadEstimationPlanJob(
     }
 
     protected override (DateOnly Date, int Period) GetKey(LoadEstimationPlanItem x) =>
-        (DateOnly.FromDateTime(x.Date.DateTime), x.Time.Hour + 1);
+        (DateOnly.FromDateTime(x.Date.DateTime), TransparencyPeriod.Hour(x.Time));
 
     protected override void Map(LoadEstimationPlanItem x, LoadEstimationPlan e) =>
         e.LoadEstimation = x.Lep;

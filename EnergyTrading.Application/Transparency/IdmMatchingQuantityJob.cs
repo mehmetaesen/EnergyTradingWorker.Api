@@ -17,7 +17,7 @@ public sealed class IdmMatchingQuantityJob(
     protected override string JobCode => Code;
 
     protected override (DateOnly StartDate, DateOnly EndDate) GetDefaultDateRange() =>
-        (k.Today, k.Today);
+        (k.Today.AddDays(-1), k.Today.AddDays(-1));
 
     protected override async Task<IReadOnlyList<MatchingQuantityItem>> FetchAsync(
         DateOnly s,
@@ -25,8 +25,11 @@ public sealed class IdmMatchingQuantityJob(
         CancellationToken ct
     )
     {
-        requestDate = s;
-        var x = TransparencyPeriod.Range(s, e);
+        var latestAvailableDate = k.Today.AddDays(-1);
+        var effectiveStart = s > latestAvailableDate ? latestAvailableDate : s;
+        var effectiveEnd = e > latestAvailableDate ? latestAvailableDate : e;
+        requestDate = effectiveStart;
+        var x = TransparencyPeriod.Range(effectiveStart, effectiveEnd);
         return (
             await c.GetDataAsync<MatchingQuantityResponse>(
                 "v1/markets/idm/data/matching-quantity",

@@ -19,5 +19,5 @@ public sealed class FirstVersionGenerationPlan : BaseEntity, IPeriodEntity
     public decimal Naphtha { get; set; }
     public decimal Wind { get; set; }
     public decimal HardCoal { get; set; }
-    public decimal Total { get; set; }
+    public decimal? Total { get; set; }
 }

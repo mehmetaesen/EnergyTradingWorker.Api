@@ -84,9 +84,9 @@ public sealed record GenerationPlanRequest(DateTimeOffset StartDate, DateTimeOff
 public sealed record SystemDirectionRequest(DateTimeOffset StartDate, DateTimeOffset EndDate, string Region = "TR1", PageRequest? Page = null);
 
 public sealed record LoadEstimationPlanResponse(IReadOnlyList<LoadEstimationPlanItem> Items);
-public sealed record LoadEstimationPlanItem(DateTimeOffset Date, DateTimeOffset Time, decimal Lep);
+public sealed record LoadEstimationPlanItem(DateTimeOffset Date, string Time, decimal Lep);
 public sealed record RealTimeConsumptionResponse(IReadOnlyList<RealTimeConsumptionItem> Items);
-public sealed record RealTimeConsumptionItem(DateTimeOffset Date, DateTimeOffset Time, decimal Consumption);
+public sealed record RealTimeConsumptionItem(DateTimeOffset Date, string Time, decimal Consumption);
 
 public sealed record GenerationPlanResponse(IReadOnlyList<GenerationPlanItem> Items);
 public sealed record GenerationPlanItem(
@@ -105,7 +105,7 @@ public sealed record GenerationPlanItem(
     [property: JsonPropertyName("nafta")] decimal Naphtha,
     [property: JsonPropertyName("ruzgar")] decimal Wind,
     [property: JsonPropertyName("tasKomur")] decimal HardCoal,
-    [property: JsonPropertyName("toplam")] decimal Total);
+    [property: JsonPropertyName("toplam")] decimal? Total);
 
 public sealed record InjectionQuantityResponse(IReadOnlyList<InjectionQuantityItem> Items);
 public sealed record InjectionQuantityItem(
@@ -121,7 +121,7 @@ public sealed record SystemDirectionResponse(IReadOnlyList<SystemDirectionItem> 
 public sealed record SystemDirectionItem(DateTimeOffset Date, string Hour, long? SmpDirectionId, string? SystemDirection);
 public sealed record WindGenerationForecastResponse(IReadOnlyList<WindGenerationForecastItem> Items);
 public sealed record WindGenerationForecastItem(
-    DateTimeOffset Date, DateTimeOffset Time, decimal Forecast, decimal Generation,
+    DateTimeOffset Date, DateTimeOffset Time, decimal Forecast, decimal? Generation,
     decimal Quarter1, decimal Quarter2, decimal Quarter3, decimal Quarter4);
 
 public sealed record InstalledCapacityResponse(IReadOnlyList<InstalledCapacityItem> InstalledCapacities);

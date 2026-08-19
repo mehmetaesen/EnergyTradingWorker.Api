@@ -24,7 +24,14 @@ public sealed class AvailableInstalledCapacityJob(
         CancellationToken ct
     )
     {
-        var x = TransparencyPeriod.Range(s, e);
+        if (s > k.Today)
+            throw new ArgumentOutOfRangeException(
+                nameof(s),
+                "Emre amade kapasite verisi gelecek tarih için alınamaz."
+            );
+
+        var safeEnd = e > k.Today ? k.Today : e;
+        var x = TransparencyPeriod.Range(s, safeEnd);
         return (
             await c.GetDataAsync<GenerationPlanResponse>(
                 "v1/generation/data/aic",

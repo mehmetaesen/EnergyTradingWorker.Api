@@ -40,6 +40,22 @@ public sealed class AdditionalTransparencyJobTests
         Assert.Equal("v1/generation/data/realtime-generation", client.Path);
     }
 
+    [Fact]
+    public async Task Real_time_consumption_uses_string_time_and_limits_end_to_two_hours_ago()
+    {
+        var repository = new FakeRepository<RealTimeConsumption>();
+        var client = new RealTimeConsumptionFakeClient();
+        var job = new RealTimeConsumptionJob(
+            new FakeLog(), client, repository, new FakeUnitOfWork(), new FakeClock());
+
+        await job.ExecuteAsync(new DateOnly(2026, 8, 18), new DateOnly(2026, 8, 18));
+
+        var entity = Assert.Single(repository.Inserted);
+        Assert.Equal(9, entity.TimeOfPeriodId);
+        Assert.Equal(123.45m, entity.Consumption);
+        Assert.Equal(new DateTimeOffset(2026, 8, 18, 10, 0, 0, TimeSpan.FromHours(3)), client.Request!.EndDate);
+    }
+
     private sealed class FakeClient : ITransparencyApiClient
     {
         public Task<McpResponse> GetMcpAsync(McpRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -73,6 +89,28 @@ public sealed class AdditionalTransparencyJobTests
                     1,2,3,4,5,6,7,8,9,10,11,42.5m,13,14,100,15,16)
             ]);
             return Task.FromResult((TResponse)response);
+        }
+    }
+
+    private sealed class RealTimeConsumptionFakeClient : ITransparencyApiClient
+    {
+        public DateRangeRequest? Request { get; private set; }
+
+        public Task<McpResponse> GetMcpAsync(McpRequest request, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<SystemMarginalPriceResponse> GetSystemMarginalPriceAsync(
+            SystemMarginalPriceRequest request,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<RealTimeConsumptionResponse> GetRealTimeConsumptionAsync(
+            DateRangeRequest request,
+            CancellationToken cancellationToken)
+        {
+            Request = request;
+            return Task.FromResult(new RealTimeConsumptionResponse([
+                new(new DateTimeOffset(2026, 8, 18, 0, 0, 0, TimeSpan.FromHours(3)), "08:00", 123.45m)
+            ]));
         }
     }
 

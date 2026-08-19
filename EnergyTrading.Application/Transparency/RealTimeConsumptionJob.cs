@@ -24,11 +24,20 @@ public sealed class RealTimeConsumptionJob(
     )
     {
         var range = TransparencyPeriod.Range(start, end);
-        return (await client.GetRealTimeConsumptionAsync(new(range.Start, range.End), ct)).Items;
+        var availableUntil = clock.Now.AddHours(-2);
+        var safeEnd = range.End < availableUntil ? range.End : availableUntil;
+
+        if (range.Start > safeEnd)
+            throw new ArgumentOutOfRangeException(
+                nameof(start),
+                "Gerçek zamanlı tüketim verisi yalnızca mevcut saatten iki saat öncesine kadar alınabilir."
+            );
+
+        return (await client.GetRealTimeConsumptionAsync(new(range.Start, safeEnd), ct)).Items;
     }
 
     protected override (DateOnly Date, int Period) GetKey(RealTimeConsumptionItem x) =>
-        (DateOnly.FromDateTime(x.Date.DateTime), x.Time.Hour + 1);
+        (DateOnly.FromDateTime(x.Date.DateTime), TransparencyPeriod.Hour(x.Time));
 
     protected override void Map(RealTimeConsumptionItem x, RealTimeConsumption e) =>
         e.Consumption = x.Consumption;
