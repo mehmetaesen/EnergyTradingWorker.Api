@@ -126,6 +126,26 @@ public sealed class EpiasClientTests
         Assert.Equal("/v1/renewables/data/res-generation-and-forecast", captured!.RequestUri!.AbsolutePath);
     }
 
+    [Fact]
+    public async Task Wind_generation_accepts_null_quantiles()
+    {
+        const string json = """{"items":[{"date":"2020-01-01T00:00:00+03:00","time":"2020-01-01T00:15:00+03:00","forecast":null,"generation":9,"quarter1":8,"quarter2":null,"quarter3":11,"quarter4":12}]}""";
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+        var client = new TransparencyApiClient(new TransparencyHttpClient(
+            new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") },
+            new StubAuthentication()));
+
+        var response = await client.GetWindGenerationForecastAsync(
+            new DateRangeRequest(DateTimeOffset.Now, DateTimeOffset.Now), default);
+
+        var item = Assert.Single(response.Items);
+        Assert.Null(item.Forecast);
+        Assert.Null(item.Quarter2);
+    }
+
     private static TransparencyAuthenticationClient CreateAuth(StubHandler handler) => new(new HttpClient(handler), Options.Create(new TransparencyOptions
     { BaseUrl = "https://example.test/", AuthenticationUrl = "https://auth.test/cas/v1/tickets", Username = "user", Password = "secret" }), TimeProvider.System);
 

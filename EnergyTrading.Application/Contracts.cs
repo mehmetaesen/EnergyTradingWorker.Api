@@ -143,8 +143,8 @@ public sealed record SystemDirectionResponse(IReadOnlyList<SystemDirectionItem> 
 public sealed record SystemDirectionItem(DateTimeOffset Date, string Hour, long? SmpDirectionId, string? SystemDirection);
 public sealed record WindGenerationForecastResponse(IReadOnlyList<WindGenerationForecastItem> Items);
 public sealed record WindGenerationForecastItem(
-    DateTimeOffset Date, DateTimeOffset Time, decimal Forecast, decimal? Generation,
-    decimal Quarter1, decimal Quarter2, decimal Quarter3, decimal Quarter4);
+    DateTimeOffset Date, DateTimeOffset Time, decimal? Forecast, decimal? Generation,
+    decimal? Quarter1, decimal? Quarter2, decimal? Quarter3, decimal? Quarter4);
 
 public sealed record InstalledCapacityResponse(IReadOnlyList<InstalledCapacityItem> InstalledCapacities);
 public sealed record InstalledCapacityItem(decimal LicencedCapacity, string RenewableEnergyType, decimal Total, decimal UnlicencedCapacity);
