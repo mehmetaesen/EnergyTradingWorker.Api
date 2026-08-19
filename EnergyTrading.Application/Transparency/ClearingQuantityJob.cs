@@ -8,8 +8,7 @@ public sealed class ClearingQuantityJob(
     ITransparencyApiClient c,
     IGenericRepository<ClearingQuantity> r,
     IUnitOfWork u,
-    ITurkeyClock k,
-    ITransparencyRegionProvider p
+    ITurkeyClock k
 ) : PeriodDataJobBase<ClearingQuantity, ClearingQuantityItem>(l, r, u)
 {
     public const string Code = "TRANSPARENCY_CLEARING_QUANTITY";
@@ -40,6 +39,4 @@ public sealed class ClearingQuantityJob(
     protected override void Map(ClearingQuantityItem x, ClearingQuantity y) =>
         (y.MatchedBids, y.MatchedOffers) = (x.MatchedBids, x.MatchedOffers);
 
-    protected override bool HasChanges(ClearingQuantityItem x, ClearingQuantity y) =>
-        x.MatchedBids != y.MatchedBids || x.MatchedOffers != y.MatchedOffers;
 }

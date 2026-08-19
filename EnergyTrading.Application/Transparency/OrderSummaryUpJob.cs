@@ -52,10 +52,4 @@ public sealed class OrderSummaryUpJob(
             x.UpRegulationZeroCoded
         );
 
-    protected override bool HasChanges(OrderSummaryUpItem x, UpRegulationOrderSummary y) =>
-        x.Net != y.Net
-        || x.UpRegulationDelivered != y.UpRegulationDelivered
-        || x.UpRegulationOneCoded != y.UpRegulationOneCoded
-        || x.UpRegulationTwoCoded != y.UpRegulationTwoCoded
-        || x.UpRegulationZeroCoded != y.UpRegulationZeroCoded;
 }

@@ -8,8 +8,7 @@ public sealed class IdmMatchingQuantityJob(
     ITransparencyApiClient c,
     IGenericRepository<IdmMatchingQuantity> r,
     IUnitOfWork u,
-    ITurkeyClock k,
-    ITransparencyRegionProvider p
+    ITurkeyClock k
 ) : KeyedPeriodDataJobBase<IdmMatchingQuantity, MatchingQuantityItem>(l, r, u)
 {
     public const string Code = "TRANSPARENCY_IDM_MATCHING_QUANTITY";
@@ -51,9 +50,4 @@ public sealed class IdmMatchingQuantityJob(
             x.KontratTuru
         );
 
-    protected override bool HasChanges(MatchingQuantityItem x, IdmMatchingQuantity y) =>
-        x.ClearingQuantityAsk != y.ClearingQuantityAsk
-        || x.ClearingQuantityBid != y.ClearingQuantityBid
-        || x.KontratAdi != y.ContractName
-        || x.KontratTuru != y.ContractType;
 }

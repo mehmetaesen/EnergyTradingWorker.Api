@@ -39,6 +39,4 @@ public abstract class RawTransparencyJobBase<TEntity>(
     protected override void Map(RawTransparencyData source, TEntity target) =>
         target.Payload = source.Payload;
 
-    protected override bool HasChanges(RawTransparencyData source, TEntity target) =>
-        target.Payload != source.Payload;
 }

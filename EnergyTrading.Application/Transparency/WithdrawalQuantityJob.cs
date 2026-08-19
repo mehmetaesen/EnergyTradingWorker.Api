@@ -40,6 +40,4 @@ public sealed class WithdrawalQuantityJob(
     protected override void Map(WithdrawalQuantityItem x, WithdrawalQuantity y) =>
         (y.Period, y.Swv) = (x.Period, x.Swv);
 
-    protected override bool HasChanges(WithdrawalQuantityItem x, WithdrawalQuantity y) =>
-        x.Period != y.Period || x.Swv != y.Swv;
 }

@@ -33,8 +33,4 @@ public sealed class PrimaryFrequencyCapacityPriceJob(
     protected override void Map(FrequencyCapacityPriceItem x, PrimaryFrequencyCapacityPrice e) =>
         e.Price = x.Price;
 
-    protected override bool HasChanges(
-        FrequencyCapacityPriceItem x,
-        PrimaryFrequencyCapacityPrice e
-    ) => e.Price != x.Price;
 }

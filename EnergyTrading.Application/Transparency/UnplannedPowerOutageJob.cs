@@ -8,8 +8,7 @@ public sealed class UnplannedPowerOutageJob(
     ITransparencyApiClient c,
     IGenericRepository<UnplannedPowerOutage> r,
     IUnitOfWork u,
-    ITurkeyClock k,
-    ITransparencyRegionProvider p
+    ITurkeyClock k
 ) : KeyedPeriodDataJobBase<UnplannedPowerOutage, PowerOutageItem>(l, r, u)
 {
     public const string Code = "TRANSPARENCY_UNPLANNED_POWER_OUTAGE";
@@ -65,9 +64,4 @@ public sealed class UnplannedPowerOutageJob(
             x.StartTime
         );
 
-    protected override bool HasChanges(PowerOutageItem x, UnplannedPowerOutage y) =>
-        x.EndTime != y.EndTime
-        || x.StartTime != y.StartTime
-        || x.EffectedSubscribers != y.AffectedSubscribers
-        || x.Reason != y.Reason;
 }

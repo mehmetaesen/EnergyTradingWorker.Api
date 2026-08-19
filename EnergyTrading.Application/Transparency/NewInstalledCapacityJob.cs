@@ -8,8 +8,7 @@ public sealed class NewInstalledCapacityJob(
     ITransparencyApiClient c,
     IGenericRepository<NewInstalledCapacity> r,
     IUnitOfWork u,
-    ITurkeyClock k,
-    ITransparencyRegionProvider p
+    ITurkeyClock k
 ) : KeyedPeriodDataJobBase<NewInstalledCapacity, InstalledCapacityItem>(l, r, u)
 {
     public const string Code = "TRANSPARENCY_NEW_INSTALLED_CAPACITY";
@@ -53,9 +52,4 @@ public sealed class NewInstalledCapacityJob(
             x.Total
         );
 
-    protected override bool HasChanges(InstalledCapacityItem x, NewInstalledCapacity y) =>
-        x.RenewableEnergyType != y.RenewableEnergyType
-        || x.LicencedCapacity != y.LicensedCapacity
-        || x.UnlicencedCapacity != y.UnlicensedCapacity
-        || x.Total != y.Total;
 }

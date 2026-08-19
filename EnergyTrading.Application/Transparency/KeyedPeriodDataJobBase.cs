@@ -24,7 +24,8 @@ public abstract class KeyedPeriodDataJobBase<TEntity, TData>(
         var database = existing.ToDictionary(entity => (entity.Date, entity.TimeOfPeriodId, entity.ExternalKey));
 
         var missing = unique.Where(item => !database.ContainsKey(GetKey(item))).Select(item => FormatKey(GetKey(item))).ToList();
-        var different = unique.Where(item => database.TryGetValue(GetKey(item), out var entity) && HasChanges(item, entity)).Select(item => FormatKey(GetKey(item))).ToList();
+        var different = unique.Where(item => database.TryGetValue(GetKey(item), out var entity) &&
+            TransparencyValue.HasChanges(CreateCandidate(item), entity)).Select(item => FormatKey(GetKey(item))).ToList();
         var extra = database.Keys.Where(key => !keys.Contains(key)).Select(FormatKey).ToList();
 
         return new ReconciliationResult(
@@ -36,9 +37,21 @@ public abstract class KeyedPeriodDataJobBase<TEntity, TData>(
     private static string FormatKey((DateOnly Date, int Period, string ExternalKey) key) =>
         $"{key.Date:yyyy-MM-dd}/{key.Period}/{key.ExternalKey}";
 
+    private TEntity CreateCandidate(TData item)
+    {
+        var key = GetKey(item);
+        var candidate = new TEntity
+        {
+            Date = key.Date,
+            TimeOfPeriodId = key.Period,
+            ExternalKey = key.ExternalKey,
+        };
+        Map(item, candidate);
+        return candidate;
+    }
+
     protected abstract (DateOnly Date, int Period, string ExternalKey) GetKey(TData item);
     protected abstract void Map(TData source, TEntity target);
-    protected abstract bool HasChanges(TData source, TEntity target);
 
     protected override async Task<SaveResult> SaveAsync(
         IReadOnlyList<TData> data,
@@ -76,7 +89,7 @@ public abstract class KeyedPeriodDataJobBase<TEntity, TData>(
                             Map(item, entity);
                             inserts.Add(entity);
                         }
-                        else if (HasChanges(item, entity))
+                        else if (TransparencyValue.HasChanges(CreateCandidate(item), entity))
                         {
                             Map(item, entity);
                             updates.Add(entity);

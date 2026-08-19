@@ -28,7 +28,7 @@ public sealed class AdditionalTransparencyJobTests
         var repository = new FakeRepository<RealTimeGeneration>();
         var client = new TypedFakeClient();
         var job = new RealTimeGenerationJob(
-            new FakeLog(), client, repository, new FakeUnitOfWork(), new FakeClock(), new FakeRegionProvider());
+            new FakeLog(), client, repository, new FakeUnitOfWork(), new FakeClock());
 
         await job.ExecuteAsync();
 

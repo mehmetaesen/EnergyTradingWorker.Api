@@ -33,6 +33,4 @@ public sealed class GenerationPlanJob(
     protected override void Map(GenerationPlanItem x, GenerationPlan e) =>
         GenerationPlanMapping.Map(x, e);
 
-    protected override bool HasChanges(GenerationPlanItem x, GenerationPlan e) =>
-        GenerationPlanMapping.Changed(x, e);
 }

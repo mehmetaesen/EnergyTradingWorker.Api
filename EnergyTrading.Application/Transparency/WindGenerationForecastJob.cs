@@ -40,11 +40,4 @@ public sealed class WindGenerationForecastJob(
         e.Quantile95 = x.Quarter4;
     }
 
-    protected override bool HasChanges(WindGenerationForecastItem x, WindGenerationAndForecast e) =>
-        e.Forecast != x.Forecast
-        || e.Generation != x.Generation
-        || e.Quantile5 != x.Quarter1
-        || e.Quantile25 != x.Quarter2
-        || e.Quantile75 != x.Quarter3
-        || e.Quantile95 != x.Quarter4;
 }

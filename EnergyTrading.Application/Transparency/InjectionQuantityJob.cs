@@ -52,23 +52,4 @@ public sealed class InjectionQuantityJob(
         e.Total = x.Total;
     }
 
-    protected override bool HasChanges(InjectionQuantityItem x, InjectionQuantity e) =>
-        e.Total != x.Total
-        || e.Asphaltite != x.Asphaltite
-        || e.Biomass != x.Biomass
-        || e.Dam != x.Dam
-        || e.FuelOil != x.Fueloil
-        || e.Geothermal != x.Geothermal
-        || e.ImportedCoal != x.ImportedCoal
-        || e.InternationalExport != x.InternationalExport
-        || e.InternationalImport != x.InternationalImport
-        || e.Lignite != x.Lignite
-        || e.Lng != x.Lng
-        || e.Naphtha != x.Naphtha
-        || e.NaturalGas != x.NaturalGas
-        || e.Other != x.Other
-        || e.River != x.River
-        || e.HardCoal != x.StoneCoal
-        || e.Solar != x.Sun
-        || e.Wind != x.Wind;
 }

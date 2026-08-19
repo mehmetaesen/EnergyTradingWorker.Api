@@ -28,6 +28,32 @@ public sealed class JobTests
     }
 
     [Fact]
+    public async Task Decimal_precision_beyond_database_scale_does_not_trigger_an_update()
+    {
+        var existing = new MarketClearingPrice
+        {
+            Date = Fixture.Day,
+            TimeOfPeriodId = 1,
+            Price = 100.123456m,
+            PriceUsd = 3.123457m,
+            PriceEur = 2.123456m,
+        };
+        var repository = new FakeRepository([existing]);
+        var apiItem = new McpResponseItem(
+            new DateTimeOffset(2026, 8, 17, 0, 0, 0, TimeSpan.FromHours(3)),
+            "00:00-01:00",
+            100.1234564m,
+            3.1234565m,
+            2.1234564m);
+        var job = new MarketClearingPriceJob(
+            new FakeLog(), new FakeClient([apiItem], false), repository, new FakeUnitOfWork(), new FakeClock());
+
+        await job.ExecuteAsync();
+
+        Assert.Empty(repository.Updated);
+    }
+
+    [Fact]
     public async Task API_error_marks_log_failed_and_is_rethrown()
     {
         var fixture = new Fixture([], fail: true); await Assert.ThrowsAsync<HttpRequestException>(() => fixture.Job.ExecuteAsync(new JobExecutionContext("9", 2)));

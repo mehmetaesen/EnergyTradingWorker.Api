@@ -42,6 +42,4 @@ public sealed class SystemDirectionJob(
         e.Direction = x.SystemDirection ?? string.Empty;
     }
 
-    protected override bool HasChanges(SystemDirectionItem x, SystemDirection e) =>
-        e.DirectionId != x.SmpDirectionId || e.Direction != (x.SystemDirection ?? string.Empty);
 }

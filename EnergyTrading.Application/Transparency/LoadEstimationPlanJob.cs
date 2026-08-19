@@ -33,6 +33,4 @@ public sealed class LoadEstimationPlanJob(
     protected override void Map(LoadEstimationPlanItem x, LoadEstimationPlan e) =>
         e.LoadEstimation = x.Lep;
 
-    protected override bool HasChanges(LoadEstimationPlanItem x, LoadEstimationPlan e) =>
-        e.LoadEstimation != x.Lep;
 }

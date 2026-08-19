@@ -8,8 +8,7 @@ public sealed class IdmWeightedAveragePriceJob(
     ITransparencyApiClient c,
     IGenericRepository<IdmWeightedAveragePrice> r,
     IUnitOfWork u,
-    ITurkeyClock k,
-    ITransparencyRegionProvider p
+    ITurkeyClock k
 ) : PeriodDataJobBase<IdmWeightedAveragePrice, WeightedAveragePriceItem>(l, r, u)
 {
     public const string Code = "TRANSPARENCY_IDM_WEIGHTED_AVERAGE_PRICE";
@@ -40,8 +39,4 @@ public sealed class IdmWeightedAveragePriceJob(
     protected override void Map(WeightedAveragePriceItem x, IdmWeightedAveragePrice y) =>
         y.WeightedAveragePrice = x.Wap;
 
-    protected override bool HasChanges(
-        WeightedAveragePriceItem x,
-        IdmWeightedAveragePrice y
-    ) => x.Wap != y.WeightedAveragePrice;
 }

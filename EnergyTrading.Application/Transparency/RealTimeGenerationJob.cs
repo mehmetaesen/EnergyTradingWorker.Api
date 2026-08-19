@@ -8,8 +8,7 @@ public sealed class RealTimeGenerationJob(
     ITransparencyApiClient c,
     IGenericRepository<RealTimeGeneration> r,
     IUnitOfWork u,
-    ITurkeyClock k,
-    ITransparencyRegionProvider p
+    ITurkeyClock k
 ) : PeriodDataJobBase<RealTimeGeneration, RealTimeGenerationItem>(l, r, u)
 {
     public const string Code = "TRANSPARENCY_REALTIME_GENERATION";
@@ -76,22 +75,4 @@ public sealed class RealTimeGenerationJob(
             x.Wind
         );
 
-    protected override bool HasChanges(RealTimeGenerationItem x, RealTimeGeneration y) =>
-        x.AsphaltiteCoal != y.AsphaltiteCoal
-        || x.Biomass != y.Biomass
-        || x.BlackCoal != y.BlackCoal
-        || x.DammedHydro != y.DammedHydro
-        || x.Fueloil != y.Fueloil
-        || x.Geothermal != y.Geothermal
-        || x.ImportCoal != y.ImportCoal
-        || x.ImportExport != y.ImportExport
-        || x.Lignite != y.Lignite
-        || x.Lng != y.Lng
-        || x.Naphta != y.Naphta
-        || x.NaturalGas != y.NaturalGas
-        || x.River != y.River
-        || x.Sun != y.Sun
-        || x.Total != y.Total
-        || x.Wasteheat != y.Wasteheat
-        || x.Wind != y.Wind;
 }

@@ -48,15 +48,4 @@ public sealed class UnlicensedGenerationJob(
             x.Toplam
         );
 
-    protected override bool HasChanges(
-        UnlicensedGenerationItem x,
-        UnlicensedGenerationAmount y
-    ) =>
-        x.Biyogaz != y.Biogas
-        || x.Biokutle != y.Biomass
-        || x.Diger != y.Other
-        || x.Gunes != y.Solar
-        || x.KanalTipi != y.ChannelType
-        || x.Ruzgar != y.Wind
-        || x.Toplam != y.Total;
 }

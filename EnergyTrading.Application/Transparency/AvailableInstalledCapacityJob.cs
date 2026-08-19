@@ -77,22 +77,4 @@ public sealed class AvailableInstalledCapacityJob(
             x.Total
         );
 
-    protected override bool HasChanges(
-        GenerationPlanItem x,
-        AvailableInstalledCapacity y
-    ) =>
-        x.River != y.River
-        || x.Dam != y.Dam
-        || x.Biomass != y.Biomass
-        || x.Other != y.Other
-        || x.NaturalGas != y.NaturalGas
-        || x.FuelOil != y.FuelOil
-        || x.Solar != y.Solar
-        || x.ImportedCoal != y.ImportedCoal
-        || x.Geothermal != y.Geothermal
-        || x.Lignite != y.Lignite
-        || x.Naphtha != y.Naphtha
-        || x.Wind != y.Wind
-        || x.HardCoal != y.HardCoal
-        || x.Total != y.Total;
 }

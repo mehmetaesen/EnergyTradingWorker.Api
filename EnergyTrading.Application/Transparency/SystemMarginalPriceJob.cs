@@ -10,7 +10,7 @@ public sealed class SystemMarginalPriceJob(
     IUnitOfWork unitOfWork,
     ITurkeyClock clock,
     ITransparencyRegionProvider regionProvider
-) : IntegrationJobBase<SystemMarginalPriceDto>(logService), ITransparencyReconciliationJob
+) : PeriodDataJobBase<SystemMarginalPrice, SystemMarginalPriceDto>(logService, repository, unitOfWork)
 {
     public const string Code = "TRANSPARENCY_SMF";
     protected override string JobCode => Code;
@@ -59,70 +59,9 @@ public sealed class SystemMarginalPriceJob(
             .ToList();
     }
 
-    protected override async Task<SaveResult> SaveAsync(
-        IReadOnlyList<SystemMarginalPriceDto> data,
-        CancellationToken cancellationToken
-    )
-    {
-        if (data.Count == 0)
-            return new SaveResult(0, 0);
-        var unique = data.GroupBy(item => (item.Date, item.TimeOfPeriodId))
-            .Select(group => group.Last())
-            .ToList();
+    protected override (DateOnly Date, int Period) GetKey(SystemMarginalPriceDto item) =>
+        (item.Date, item.TimeOfPeriodId);
 
-        return await unitOfWork.ExecuteInTransactionAsync(
-            async ct =>
-            {
-                var inserts = new List<SystemMarginalPrice>();
-                var updates = new List<SystemMarginalPrice>();
-                foreach (var dayGroup in unique.GroupBy(item => item.Date))
-                {
-                    var existing = await repository.GetListAsync(
-                        dayGroup.Key,
-                        dayGroup.Select(item => item.TimeOfPeriodId).ToArray(),
-                        ct
-                    );
-                    var index = existing.ToDictionary(item => (item.Date, item.TimeOfPeriodId));
-                    foreach (var item in dayGroup)
-                    {
-                        if (!index.TryGetValue((item.Date, item.TimeOfPeriodId), out var entity))
-                            inserts.Add(
-                                new SystemMarginalPrice
-                                {
-                                    Date = item.Date,
-                                    TimeOfPeriodId = item.TimeOfPeriodId,
-                                    Price = item.Price,
-                                }
-                            );
-                        else if (entity.Price != item.Price)
-                        {
-                            entity.Price = item.Price;
-                            updates.Add(entity);
-                        }
-                    }
-                }
-
-                await repository.InsertAsync(inserts, ct);
-                await repository.UpdateAsync(updates, ct);
-                return new SaveResult(inserts.Count, updates.Count);
-            },
-            cancellationToken
-        );
-    }
-
-    public async Task<ReconciliationResult> ReconcileAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken)
-    {
-        var data = await FetchAsync(startDate, endDate, cancellationToken);
-        var unique = data.GroupBy(item => (item.Date, item.TimeOfPeriodId)).Select(group => group.Last()).ToList();
-        var database = await repository.GetDateRangeAsync(startDate, endDate, cancellationToken);
-        var index = database.ToDictionary(item => (item.Date, item.TimeOfPeriodId));
-        var keys = unique.Select(item => (item.Date, item.TimeOfPeriodId)).ToHashSet();
-        var missing = unique.Where(item => !index.ContainsKey((item.Date, item.TimeOfPeriodId))).Select(FormatKey).ToList();
-        var different = unique.Where(item => index.TryGetValue((item.Date, item.TimeOfPeriodId), out var entity) && entity.Price != item.Price).Select(FormatKey).ToList();
-        var extra = database.Where(item => !keys.Contains((item.Date, item.TimeOfPeriodId))).Select(item => $"{item.Date:yyyy-MM-dd}/{item.TimeOfPeriodId}").ToList();
-        return new(Code, startDate, endDate, data.Count, unique.Count, database.Count, missing.Count, different.Count, extra.Count,
-            missing.Take(20).ToList(), different.Take(20).ToList(), extra.Take(20).ToList());
-    }
-
-    private static string FormatKey(SystemMarginalPriceDto item) => $"{item.Date:yyyy-MM-dd}/{item.TimeOfPeriodId}";
+    protected override void Map(SystemMarginalPriceDto source, SystemMarginalPrice target) =>
+        target.Price = source.Price;
 }

@@ -42,6 +42,4 @@ public sealed class RealTimeConsumptionJob(
     protected override void Map(RealTimeConsumptionItem x, RealTimeConsumption e) =>
         e.Consumption = x.Consumption;
 
-    protected override bool HasChanges(RealTimeConsumptionItem x, RealTimeConsumption e) =>
-        e.Consumption != x.Consumption;
 }
