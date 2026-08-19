@@ -61,6 +61,7 @@ public sealed class SystemMarginalPriceJobTests
         public List<SystemMarginalPrice> Inserted { get; } = [];
         public List<SystemMarginalPrice> Updated { get; } = [];
         public Task<List<SystemMarginalPrice>> GetListAsync(DateOnly date, IReadOnlyCollection<int> ids, CancellationToken ct) => Task.FromResult(existing.Where(x => x.Date == date && ids.Contains(x.TimeOfPeriodId)).ToList());
+        public Task<List<SystemMarginalPrice>> GetDateRangeAsync(DateOnly start, DateOnly end, CancellationToken ct) => Task.FromResult(existing.Where(x => x.Date >= start && x.Date <= end).ToList());
         public Task InsertAsync(IReadOnlyCollection<SystemMarginalPrice> entities, CancellationToken ct) { Inserted.AddRange(entities); return Task.CompletedTask; }
         public Task UpdateAsync(IReadOnlyCollection<SystemMarginalPrice> entities, CancellationToken ct) { Updated.AddRange(entities); return Task.CompletedTask; }
     }

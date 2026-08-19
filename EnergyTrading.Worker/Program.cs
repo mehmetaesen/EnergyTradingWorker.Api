@@ -2,6 +2,7 @@ using EnergyTrading.Application;
 using EnergyTrading.Infrastructure;
 using EnergyTrading.Worker;
 using Scheduled = EnergyTrading.Worker.Transparency;
+using ApplicationJobs = EnergyTrading.Application.Transparency;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
@@ -94,6 +95,54 @@ app.MapPost("/api/jobs/enqueue", (
         : Results.Ok(new { JobId = backgroundJobId, Message = "Job queue'ya eklendi." });
 });
 
+app.MapPost("/api/jobs/reconcile", async (
+    ReconciliationRequest request,
+    HttpRequest httpRequest,
+    IServiceProvider services,
+    CancellationToken cancellationToken) =>
+{
+    if (!string.Equals(httpRequest.Headers["X-Requested-With"], "EnergyTradingOperations", StringComparison.Ordinal))
+        return Results.BadRequest(new { Message = "Invalid operations request." });
+    if (request.EndDate < request.StartDate)
+        return Results.BadRequest(new { Message = "Bitiş tarihi başlangıç tarihinden önce olamaz." });
+    if (request.EndDate > request.StartDate.AddMonths(1))
+        return Results.BadRequest(new { Message = "Tarih aralığı en fazla bir takvim ayı olabilir." });
+
+    ITransparencyReconciliationJob? job = request.JobCode switch
+    {
+        MarketClearingPriceJob.Code => services.GetRequiredService<ApplicationJobs.MarketClearingPriceJob>(),
+        SystemMarginalPriceJob.Code => services.GetRequiredService<ApplicationJobs.SystemMarginalPriceJob>(),
+        LoadEstimationPlanJob.Code => services.GetRequiredService<ApplicationJobs.LoadEstimationPlanJob>(),
+        RealTimeConsumptionJob.Code => services.GetRequiredService<ApplicationJobs.RealTimeConsumptionJob>(),
+        GenerationPlanJob.Code => services.GetRequiredService<ApplicationJobs.GenerationPlanJob>(),
+        FirstVersionGenerationPlanJob.Code => services.GetRequiredService<ApplicationJobs.FirstVersionGenerationPlanJob>(),
+        InjectionQuantityJob.Code => services.GetRequiredService<ApplicationJobs.InjectionQuantityJob>(),
+        PrimaryFrequencyCapacityPriceJob.Code => services.GetRequiredService<ApplicationJobs.PrimaryFrequencyCapacityPriceJob>(),
+        SecondaryFrequencyCapacityPriceJob.Code => services.GetRequiredService<ApplicationJobs.SecondaryFrequencyCapacityPriceJob>(),
+        SystemDirectionJob.Code => services.GetRequiredService<ApplicationJobs.SystemDirectionJob>(),
+        WindGenerationForecastJob.Code => services.GetRequiredService<ApplicationJobs.WindGenerationForecastJob>(),
+        FinalGenerationPlanJob.Code => services.GetRequiredService<ApplicationJobs.FinalGenerationPlanJob>(),
+        NewInstalledCapacityJob.Code => services.GetRequiredService<ApplicationJobs.NewInstalledCapacityJob>(),
+        PlannedPowerOutageJob.Code => services.GetRequiredService<ApplicationJobs.PlannedPowerOutageJob>(),
+        UnplannedPowerOutageJob.Code => services.GetRequiredService<ApplicationJobs.UnplannedPowerOutageJob>(),
+        AvailableInstalledCapacityJob.Code => services.GetRequiredService<ApplicationJobs.AvailableInstalledCapacityJob>(),
+        UnlicensedGenerationJob.Code => services.GetRequiredService<ApplicationJobs.UnlicensedGenerationJob>(),
+        RealTimeGenerationJob.Code => services.GetRequiredService<ApplicationJobs.RealTimeGenerationJob>(),
+        OrderSummaryUpJob.Code => services.GetRequiredService<ApplicationJobs.OrderSummaryUpJob>(),
+        OrderSummaryDownJob.Code => services.GetRequiredService<ApplicationJobs.OrderSummaryDownJob>(),
+        ClearingQuantityJob.Code => services.GetRequiredService<ApplicationJobs.ClearingQuantityJob>(),
+        IdmWeightedAveragePriceJob.Code => services.GetRequiredService<ApplicationJobs.IdmWeightedAveragePriceJob>(),
+        IdmMatchingQuantityJob.Code => services.GetRequiredService<ApplicationJobs.IdmMatchingQuantityJob>(),
+        WithdrawalQuantityJob.Code => services.GetRequiredService<ApplicationJobs.WithdrawalQuantityJob>(),
+        _ => null
+    };
+
+    if (job is null)
+        return Results.BadRequest(new { Message = "Seçilen job mutabakat kontrolünü desteklemiyor." });
+
+    return Results.Ok(await job.ReconcileAsync(request.StartDate, request.EndDate, cancellationToken));
+});
+
 await using (var scope = app.Services.CreateAsyncScope())
 {
     if (builder.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true))
@@ -182,3 +231,4 @@ await using (var scope = app.Services.CreateAsyncScope())
 await app.RunAsync();
 
 public sealed record ManualJobRequest(string JobCode, DateOnly StartDate, DateOnly EndDate);
+public sealed record ReconciliationRequest(string JobCode, DateOnly StartDate, DateOnly EndDate);

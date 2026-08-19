@@ -12,6 +12,8 @@ public sealed class EfGenericRepository<TEntity>(EnergyTradingDbContext db) : IG
         if (timeOfPeriodIds.Count == 0) return Task.FromResult(new List<TEntity>());
         return db.Set<TEntity>().AsNoTracking().Where(x => x.Date == date && timeOfPeriodIds.Contains(x.TimeOfPeriodId)).ToListAsync(cancellationToken);
     }
+    public Task<List<TEntity>> GetDateRangeAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken) =>
+        db.Set<TEntity>().AsNoTracking().Where(x => x.Date >= startDate && x.Date <= endDate).ToListAsync(cancellationToken);
     public async Task InsertAsync(IReadOnlyCollection<TEntity> entities, CancellationToken cancellationToken)
     {
         if (entities.Count == 0) return; await db.Set<TEntity>().AddRangeAsync(entities, cancellationToken);

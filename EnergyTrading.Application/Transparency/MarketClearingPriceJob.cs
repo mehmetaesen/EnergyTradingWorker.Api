@@ -9,7 +9,7 @@ public sealed class MarketClearingPriceJob(
     IGenericRepository<MarketClearingPrice> repository,
     IUnitOfWork unitOfWork,
     ITurkeyClock clock
-) : IntegrationJobBase<MarketClearingPriceDto>(logService)
+) : IntegrationJobBase<MarketClearingPriceDto>(logService), ITransparencyReconciliationJob
 {
     public const string Code = "TRANSPARENCY_PTF";
     protected override string JobCode => Code;
@@ -95,6 +95,23 @@ public sealed class MarketClearingPriceJob(
             cancellationToken
         );
     }
+
+    public async Task<ReconciliationResult> ReconcileAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken)
+    {
+        var data = await FetchAsync(startDate, endDate, cancellationToken);
+        var unique = data.GroupBy(item => (item.Date, item.TimeOfPeriodId)).Select(group => group.Last()).ToList();
+        var database = await repository.GetDateRangeAsync(startDate, endDate, cancellationToken);
+        var index = database.ToDictionary(item => (item.Date, item.TimeOfPeriodId));
+        var keys = unique.Select(item => (item.Date, item.TimeOfPeriodId)).ToHashSet();
+        var missing = unique.Where(item => !index.ContainsKey((item.Date, item.TimeOfPeriodId))).Select(FormatKey).ToList();
+        var different = unique.Where(item => index.TryGetValue((item.Date, item.TimeOfPeriodId), out var entity) &&
+            (entity.Price != item.Price || entity.PriceUsd != item.PriceUsd || entity.PriceEur != item.PriceEur)).Select(FormatKey).ToList();
+        var extra = database.Where(item => !keys.Contains((item.Date, item.TimeOfPeriodId))).Select(item => FormatKey(new(item.Date, item.TimeOfPeriodId, 0, 0, 0))).ToList();
+        return new(Code, startDate, endDate, data.Count, unique.Count, database.Count, missing.Count, different.Count, extra.Count,
+            missing.Take(20).ToList(), different.Take(20).ToList(), extra.Take(20).ToList());
+    }
+
+    private static string FormatKey(MarketClearingPriceDto item) => $"{item.Date:yyyy-MM-dd}/{item.TimeOfPeriodId}";
 
     private static int ParsePeriod(string hour)
     {

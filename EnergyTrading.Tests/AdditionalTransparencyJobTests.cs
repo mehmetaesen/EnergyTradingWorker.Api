@@ -118,6 +118,7 @@ public sealed class AdditionalTransparencyJobTests
     {
         public List<TEntity> Inserted { get; } = [];
         public Task<List<TEntity>> GetListAsync(DateOnly date, IReadOnlyCollection<int> ids, CancellationToken ct) => Task.FromResult(new List<TEntity>());
+        public Task<List<TEntity>> GetDateRangeAsync(DateOnly start, DateOnly end, CancellationToken ct) => Task.FromResult(new List<TEntity>());
         public Task InsertAsync(IReadOnlyCollection<TEntity> entities, CancellationToken ct) { Inserted.AddRange(entities); return Task.CompletedTask; }
         public Task UpdateAsync(IReadOnlyCollection<TEntity> entities, CancellationToken ct) => Task.CompletedTask;
     }

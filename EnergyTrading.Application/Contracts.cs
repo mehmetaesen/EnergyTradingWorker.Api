@@ -5,11 +5,33 @@ using System.Text.Json;
 namespace EnergyTrading.Application;
 
 public sealed record SaveResult(int InsertedCount, int UpdatedCount);
+public sealed record ReconciliationResult(
+    string JobCode,
+    DateOnly StartDate,
+    DateOnly EndDate,
+    int ApiRecordCount,
+    int ApiUniqueRecordCount,
+    int DatabaseRecordCount,
+    int MissingRecordCount,
+    int DifferentRecordCount,
+    int ExtraRecordCount,
+    IReadOnlyList<string> MissingKeys,
+    IReadOnlyList<string> DifferentKeys,
+    IReadOnlyList<string> ExtraKeys)
+{
+    public bool IsMatch => MissingRecordCount == 0 && DifferentRecordCount == 0 && ExtraRecordCount == 0;
+}
+
+public interface ITransparencyReconciliationJob
+{
+    Task<ReconciliationResult> ReconcileAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken);
+}
 public sealed record JobExecutionContext(string? HangfireJobId = null, int RetryCount = 0);
 
 public interface IGenericRepository<TEntity> where TEntity : BaseEntity, IPeriodEntity
 {
     Task<List<TEntity>> GetListAsync(DateOnly date, IReadOnlyCollection<int> timeOfPeriodIds, CancellationToken cancellationToken);
+    Task<List<TEntity>> GetDateRangeAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken);
     Task InsertAsync(IReadOnlyCollection<TEntity> entities, CancellationToken cancellationToken);
     Task UpdateAsync(IReadOnlyCollection<TEntity> entities, CancellationToken cancellationToken);
 }

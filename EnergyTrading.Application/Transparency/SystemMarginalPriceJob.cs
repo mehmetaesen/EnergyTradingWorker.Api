@@ -10,7 +10,7 @@ public sealed class SystemMarginalPriceJob(
     IUnitOfWork unitOfWork,
     ITurkeyClock clock,
     ITransparencyRegionProvider regionProvider
-) : IntegrationJobBase<SystemMarginalPriceDto>(logService)
+) : IntegrationJobBase<SystemMarginalPriceDto>(logService), ITransparencyReconciliationJob
 {
     public const string Code = "TRANSPARENCY_SMF";
     protected override string JobCode => Code;
@@ -109,4 +109,20 @@ public sealed class SystemMarginalPriceJob(
             cancellationToken
         );
     }
+
+    public async Task<ReconciliationResult> ReconcileAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken)
+    {
+        var data = await FetchAsync(startDate, endDate, cancellationToken);
+        var unique = data.GroupBy(item => (item.Date, item.TimeOfPeriodId)).Select(group => group.Last()).ToList();
+        var database = await repository.GetDateRangeAsync(startDate, endDate, cancellationToken);
+        var index = database.ToDictionary(item => (item.Date, item.TimeOfPeriodId));
+        var keys = unique.Select(item => (item.Date, item.TimeOfPeriodId)).ToHashSet();
+        var missing = unique.Where(item => !index.ContainsKey((item.Date, item.TimeOfPeriodId))).Select(FormatKey).ToList();
+        var different = unique.Where(item => index.TryGetValue((item.Date, item.TimeOfPeriodId), out var entity) && entity.Price != item.Price).Select(FormatKey).ToList();
+        var extra = database.Where(item => !keys.Contains((item.Date, item.TimeOfPeriodId))).Select(item => $"{item.Date:yyyy-MM-dd}/{item.TimeOfPeriodId}").ToList();
+        return new(Code, startDate, endDate, data.Count, unique.Count, database.Count, missing.Count, different.Count, extra.Count,
+            missing.Take(20).ToList(), different.Take(20).ToList(), extra.Take(20).ToList());
+    }
+
+    private static string FormatKey(SystemMarginalPriceDto item) => $"{item.Date:yyyy-MM-dd}/{item.TimeOfPeriodId}";
 }

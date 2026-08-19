@@ -69,6 +69,7 @@ public sealed class JobTests
     {
         public List<MarketClearingPrice> Inserted { get; } = []; public List<MarketClearingPrice> Updated { get; } = [];
         public Task<List<MarketClearingPrice>> GetListAsync(DateOnly date, IReadOnlyCollection<int> ids, CancellationToken ct) => Task.FromResult(existing.Where(x => x.Date == date && ids.Contains(x.TimeOfPeriodId)).ToList());
+        public Task<List<MarketClearingPrice>> GetDateRangeAsync(DateOnly start, DateOnly end, CancellationToken ct) => Task.FromResult(existing.Where(x => x.Date >= start && x.Date <= end).ToList());
         public Task InsertAsync(IReadOnlyCollection<MarketClearingPrice> entities, CancellationToken ct) { Inserted.AddRange(entities); return Task.CompletedTask; }
         public Task UpdateAsync(IReadOnlyCollection<MarketClearingPrice> entities, CancellationToken ct) { Updated.AddRange(entities); return Task.CompletedTask; }
     }
