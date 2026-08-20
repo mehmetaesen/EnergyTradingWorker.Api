@@ -58,6 +58,29 @@ public sealed class EpiasClientTests
         Assert.Null(Assert.Single(response.Items).Wap);
     }
 
+    [Fact]
+    public async Task Idm_contract_summary_response_uses_documented_field_names()
+    {
+        const string json = """{"items":[{"agirlikliOrtalama":123.45,"eslesmeMiktar":20,"islemHacmi":2469,"kontratAdi":"PH260818-01","kontratTurAciklama":"Saatlik","maxAlisFiyat":130,"maxEslesmeFiyat":125,"maxSatisFiyat":131,"minAlisFiyat":120,"minEslesmeFiyat":119,"minSatisFiyat":121,"teklifAlisMiktar":15,"teklifSatisMiktar":16}]}""";
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+        var client = new TransparencyHttpClient(
+            new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") },
+            new StubAuthentication());
+
+        var response = await client.PostAsync<DateRangeRequest, IdmContractSummaryResponse>(
+            "reporting-service/v1/data/idm-contract-summary",
+            new DateRangeRequest(DateTimeOffset.Now, DateTimeOffset.Now),
+            default);
+
+        var item = Assert.Single(response.Items);
+        Assert.Equal("PH260818-01", item.ContractName);
+        Assert.Equal(123.45m, item.WeightedAveragePrice);
+        Assert.Equal(16m, item.AskQuantity);
+    }
+
     [Theory]
     [InlineData("null")]
     [InlineData("\"Şeffaflık servisi geçici olarak kullanılamıyor\"")]

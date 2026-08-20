@@ -90,6 +90,32 @@ public sealed class AdditionalTransparencyJobTests
         Assert.Equal(28m, entity.Total);
     }
 
+    [Fact]
+    public async Task Idm_contract_summary_maps_documented_response_fields()
+    {
+        var repository = new FakeRepository<IdmContractSummary>();
+        var job = new IdmContractSummaryJob(
+            new FakeLog(), new IdmContractSummaryFakeClient(), repository,
+            new FakeUnitOfWork(), new FakeClock());
+
+        await job.ExecuteAsync(new DateOnly(2026, 8, 18), new DateOnly(2026, 8, 18));
+
+        Assert.Equal(2, repository.Inserted.Count);
+        var entity = repository.Inserted.Single(item => item.ContractName == "PB20010723-01");
+        Assert.Equal(24, entity.TimeOfPeriodId);
+        Assert.Equal("PB20010723-01|Saatlik", entity.ExternalKey);
+        Assert.Equal("Saatlik", entity.ContractTypeDescription);
+        Assert.Equal(123.45m, entity.WeightedAveragePrice);
+        Assert.Equal(20m, entity.MatchingQuantity);
+        Assert.Equal(2469m, entity.TradingVolume);
+        Assert.Equal(125m, entity.MaximumMatchingPrice);
+        Assert.Equal(15m, entity.BidQuantity);
+        Assert.Equal(16m, entity.AskQuantity);
+
+        var midnight = repository.Inserted.Single(item => item.ContractName == "PH26081800");
+        Assert.Equal(1, midnight.TimeOfPeriodId);
+    }
+
     private sealed class FakeClient : ITransparencyApiClient
     {
         public Task<McpResponse> GetMcpAsync(McpRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -191,6 +217,31 @@ public sealed class AdditionalTransparencyJobTests
                     new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.FromHours(3)),
                     "2020-01-01T00:00:00+03:00",
                     1m, 2m, 3m, 4m, 5m, 6m, 28m)
+            ]);
+            return Task.FromResult((TResponse)response);
+        }
+    }
+
+    private sealed class IdmContractSummaryFakeClient : ITransparencyApiClient
+    {
+        public Task<McpResponse> GetMcpAsync(McpRequest request, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<SystemMarginalPriceResponse> GetSystemMarginalPriceAsync(
+            SystemMarginalPriceRequest request,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<TResponse> GetDataAsync<TResponse>(
+            string path,
+            object request,
+            CancellationToken cancellationToken)
+        {
+            Assert.Equal("/reporting-service/v1/data/idm-contract-summary", path);
+            object response = new IdmContractSummaryResponse([
+                new(123.45m, 20m, 2469m, "PB20010723-01", "Saatlik",
+                    130m, 125m, 131m, 120m, 119m, 121m, 15m, 16m),
+                new(123.45m, 20m, 2469m, "PH26081800", "Saatlik",
+                    130m, 125m, 131m, 120m, 119m, 121m, 15m, 16m)
             ]);
             return Task.FromResult((TResponse)response);
         }

@@ -174,6 +174,21 @@ public sealed record MatchingQuantityResponse(IReadOnlyList<MatchingQuantityItem
 public sealed record MatchingQuantityItem(decimal ClearingQuantityAsk, decimal ClearingQuantityBid, string KontratAdi, string KontratTuru);
 public sealed record WithdrawalQuantityResponse(IReadOnlyList<WithdrawalQuantityItem> Items);
 public sealed record WithdrawalQuantityItem(DateTimeOffset Hour, DateTimeOffset Period, decimal Swv);
+public sealed record IdmContractSummaryResponse(IReadOnlyList<IdmContractSummaryItem> Items);
+public sealed record IdmContractSummaryItem(
+    [property: JsonPropertyName("agirlikliOrtalama")] decimal? WeightedAveragePrice,
+    [property: JsonPropertyName("eslesmeMiktar")] decimal? MatchingQuantity,
+    [property: JsonPropertyName("islemHacmi")] decimal? TradingVolume,
+    [property: JsonPropertyName("kontratAdi")] string? ContractName,
+    [property: JsonPropertyName("kontratTurAciklama")] string? ContractTypeDescription,
+    [property: JsonPropertyName("maxAlisFiyat")] decimal? MaximumBidPrice,
+    [property: JsonPropertyName("maxEslesmeFiyat")] decimal? MaximumMatchingPrice,
+    [property: JsonPropertyName("maxSatisFiyat")] decimal? MaximumAskPrice,
+    [property: JsonPropertyName("minAlisFiyat")] decimal? MinimumBidPrice,
+    [property: JsonPropertyName("minEslesmeFiyat")] decimal? MinimumMatchingPrice,
+    [property: JsonPropertyName("minSatisFiyat")] decimal? MinimumAskPrice,
+    [property: JsonPropertyName("teklifAlisMiktar")] decimal? BidQuantity,
+    [property: JsonPropertyName("teklifSatisMiktar")] decimal? AskQuantity);
 
 public interface ITransparencyRegionProvider
 {

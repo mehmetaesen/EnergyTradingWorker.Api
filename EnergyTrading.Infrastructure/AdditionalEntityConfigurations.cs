@@ -52,7 +52,8 @@ public abstract class PeriodEntityConfiguration<TEntity> : IEntityTypeConfigurat
         builder.ConfigureBase();
         builder.Property(entity => entity.Date).HasColumnType("date");
         ConfigureIdentity(builder);
-        foreach (var property in builder.Metadata.GetProperties().Where(property => property.ClrType == typeof(decimal)))
+        foreach (var property in builder.Metadata.GetProperties().Where(property =>
+                     property.ClrType == typeof(decimal) || Nullable.GetUnderlyingType(property.ClrType) == typeof(decimal)))
         {
             property.SetPrecision(18);
             property.SetScale(6);
@@ -129,4 +130,4 @@ public sealed class ClearingQuantityConfiguration : PeriodEntityConfiguration<Cl
 public sealed class IdmWeightedAveragePriceConfiguration : PeriodEntityConfiguration<IdmWeightedAveragePrice> { protected override string TableName => "idm_weighted_average_prices"; }
 public sealed class IdmMatchingQuantityConfiguration : KeyedPeriodEntityConfiguration<IdmMatchingQuantity> { protected override string TableName => "idm_matching_quantities"; }
 public sealed class WithdrawalQuantityConfiguration : PeriodEntityConfiguration<WithdrawalQuantity> { protected override string TableName => "withdrawal_quantities"; }
-public sealed class IdmContractSummaryConfiguration : RawTransparencyConfiguration<IdmContractSummary> { protected override string TableName => "idm_contract_summaries"; }
+public sealed class IdmContractSummaryConfiguration : KeyedPeriodEntityConfiguration<IdmContractSummary> { protected override string TableName => "idm_contract_summaries"; }

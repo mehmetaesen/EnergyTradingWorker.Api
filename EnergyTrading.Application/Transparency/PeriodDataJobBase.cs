@@ -124,6 +124,27 @@ internal static class TransparencyPeriod
 
     internal static int Hour(int value) => value is >= 1 and <= 24 ? value : value + 1;
 
+    internal static int ContractPeriod(string? contractName)
+    {
+        if (string.IsNullOrWhiteSpace(contractName))
+            return 1;
+
+        var contractCode = contractName.AsSpan();
+        var separatorIndex = contractCode.IndexOf('-');
+        if (separatorIndex >= 0)
+            contractCode = contractCode[..separatorIndex];
+        if (contractCode.Length < 2)
+            return 1;
+
+        return int.TryParse(
+                   contractCode[^2..],
+                   NumberStyles.None,
+                   CultureInfo.InvariantCulture,
+                   out var hour) && hour is >= 0 and <= 23
+            ? hour + 1
+            : 1;
+    }
+
     internal static void Validate(int value)
     {
         if (value is < 1 or > 24)

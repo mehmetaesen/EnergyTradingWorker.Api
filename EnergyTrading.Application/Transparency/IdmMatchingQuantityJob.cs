@@ -40,7 +40,11 @@ public sealed class IdmMatchingQuantityJob(
 
     protected override (DateOnly Date, int Period, string ExternalKey) GetKey(
         MatchingQuantityItem x
-    ) => (requestDate, 1, $"{x.KontratAdi}|{x.KontratTuru}");
+    ) => (
+        requestDate,
+        TransparencyPeriod.ContractPeriod(x.KontratAdi),
+        $"{x.KontratAdi}|{x.KontratTuru}"
+    );
 
     protected override void Map(MatchingQuantityItem x, IdmMatchingQuantity y) =>
         (y.ClearingQuantityAsk, y.ClearingQuantityBid, y.ContractName, y.ContractType) = (

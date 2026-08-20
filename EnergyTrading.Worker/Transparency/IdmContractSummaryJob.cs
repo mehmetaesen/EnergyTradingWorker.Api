@@ -6,7 +6,7 @@ namespace EnergyTrading.Worker.Transparency;
 
 public sealed class IdmContractSummaryJob(
     EnergyTrading.Application.Transparency.IdmContractSummaryJob job
-) : JobAdapter<RawTransparencyData>(job)
+) : JobAdapter<IdmContractSummaryItem>(job)
 {
     [
         Queue("transparency"),
